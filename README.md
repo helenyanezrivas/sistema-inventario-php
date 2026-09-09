@@ -27,7 +27,8 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 - Crear categorías.
 - Editar categorías.
 - Eliminar categorías cuando no tienen productos asociados.
-- Gestión de estado de las categorías.
+- Gestión del estado de las categorías.
+- Visualización de la cantidad de productos asociados a cada categoría.
 
 ### 👥 Usuarios
 
@@ -56,22 +57,25 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 - Resumen general del inventario.
 - Cantidad de productos activos.
 - Cantidad de categorías activas.
-- Resumen de ventas.
+- Cantidad de ventas realizadas.
 - Indicadores de ventas del día.
+- Total vendido durante el día.
 - Productos con stock bajo.
-- Resumen de ventas de los últimos días.
-- Resumen mensual.
-- Gráficos estadísticos.
+- Visualización de las últimas ventas registradas.
+- Gráfico de ventas de los últimos 7 días.
+- Gráfico de ventas por categoría del mes actual.
+- Resumen mensual con cantidad de ventas, total vendido y promedio por venta.
 
 ### 🔐 Seguridad y control de acceso
 
 - Inicio de sesión mediante usuario y contraseña.
 - Verificación de contraseñas mediante `password_verify()`.
-- Contraseñas almacenadas mediante `password_hash()`.
+- Contraseñas protegidas mediante hash.
 - Protección de páginas internas mediante sesiones.
 - Control de acceso según rol.
 - Regeneración del ID de sesión después del inicio de sesión.
 - Cierre de sesión y destrucción de la sesión.
+- Uso de consultas preparadas para operaciones parametrizadas.
 
 ## Tecnologías utilizadas
 
@@ -132,7 +136,7 @@ Principales tablas:
 - `ventas`
 - `detalle_ventas`
 
-Las relaciones entre las tablas permiten mantener la integridad de la información y controlar la asociación entre productos, categorías y ventas.
+Las relaciones entre las tablas permiten mantener la integridad de la información y controlar la asociación entre usuarios, productos, categorías y ventas.
 
 ## Instalación
 
@@ -166,7 +170,7 @@ Crear una base de datos MySQL llamada:
 inventario
 ```
 
-Luego importar la estructura de la base de datos.
+Luego importar la estructura de las tablas correspondientes al proyecto.
 
 ### 4. Configurar la conexión
 
@@ -228,7 +232,7 @@ El sistema permite generar reportes en:
 - Excel
 - PDF
 
-Las exportaciones incluyen información relacionada con productos y ventas según los filtros seleccionados.
+Las exportaciones incluyen información relacionada con productos y ventas según los filtros disponibles en cada módulo.
 
 ## Objetivo del proyecto
 
