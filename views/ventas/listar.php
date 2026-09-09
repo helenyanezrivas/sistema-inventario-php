@@ -3,6 +3,14 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
+
+
+// =====================================================
+// SEGURIDAD CSRF
+// =====================================================
+
+csrf_token();
 
 
 // =====================================================
@@ -1027,16 +1035,32 @@ include "../../includes/navbar.php";
 
                                             <!-- ANULAR -->
 
-                                            <a
-                                                href="eliminar.php?id=<?php echo $venta["id"]; ?>"
-                                                class="btn btn-sm btn-danger"
-                                                title="Anular venta"
-                                                onclick="return confirm('¿Estás segura de anular esta venta?\\n\\nLa venta permanecerá en el historial y el stock de los productos será restaurado.');"
+                                            <form
+                                                method="POST"
+                                                action="eliminar.php"
+                                                class="d-inline"
+                                                onsubmit="return confirm('¿Estás segura de anular esta venta?\\n\\nLa venta permanecerá en el historial y el stock de los productos será restaurado.');"
                                             >
 
-                                                <i class="bi bi-x-circle"></i>
+                                                <input
+                                                    type="hidden"
+                                                    name="id"
+                                                    value="<?php echo (int) $venta["id"]; ?>"
+                                                >
 
-                                            </a>
+                                                <?php echo csrf_field(); ?>
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-danger"
+                                                    title="Anular venta"
+                                                >
+
+                                                    <i class="bi bi-x-circle"></i>
+
+                                                </button>
+
+                                            </form>
 
 
                                         <?php endif; ?>

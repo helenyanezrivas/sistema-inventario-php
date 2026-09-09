@@ -3,17 +3,43 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
-// Verificar sesión
+// =====================================================
+// VERIFICAR SESIÓN
+// =====================================================
+
 if (!isset($_SESSION["usuario_id"])) {
     header("Location: ../../login.php");
     exit;
 }
 
-// Obtener ID de la categoría
-$id = intval($_GET["id"] ?? 0);
+// =====================================================
+// SOLO PERMITIR POST
+// =====================================================
 
-if ($id <= 0) {
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    header("Location: listar.php");
+    exit;
+}
+
+// =====================================================
+// VERIFICAR CSRF
+// =====================================================
+
+verificar_csrf();
+
+// =====================================================
+// OBTENER ID
+// =====================================================
+
+$id = filter_input(
+    INPUT_POST,
+    "id",
+    FILTER_VALIDATE_INT
+);
+
+if (!$id || $id < 1) {
     header("Location: listar.php");
     exit;
 }
@@ -24,17 +50,29 @@ if ($id <= 0) {
 // =====================================================
 
 $sqlCategoria = "
-    SELECT id, nombre
+    SELECT
+        id,
+        nombre
     FROM categorias
     WHERE id = ?
     LIMIT 1
 ";
 
 $stmtCategoria = $conexion->prepare($sqlCategoria);
-$stmtCategoria->bind_param("i", $id);
+
+if (!$stmtCategoria) {
+    die("Ocurrió un error al preparar la consulta.");
+}
+
+$stmtCategoria->bind_param(
+    "i",
+    $id
+);
+
 $stmtCategoria->execute();
 
-$resultadoCategoria = $stmtCategoria->get_result();
+$resultadoCategoria =
+    $stmtCategoria->get_result();
 
 if ($resultadoCategoria->num_rows === 0) {
 
@@ -44,7 +82,8 @@ if ($resultadoCategoria->num_rows === 0) {
     exit;
 }
 
-$categoria = $resultadoCategoria->fetch_assoc();
+$categoria =
+    $resultadoCategoria->fetch_assoc();
 
 $stmtCategoria->close();
 
@@ -59,14 +98,28 @@ $sqlProductos = "
     WHERE categoria_id = ?
 ";
 
-$stmtProductos = $conexion->prepare($sqlProductos);
-$stmtProductos->bind_param("i", $id);
+$stmtProductos =
+    $conexion->prepare($sqlProductos);
+
+if (!$stmtProductos) {
+    die("Ocurrió un error al preparar la consulta.");
+}
+
+$stmtProductos->bind_param(
+    "i",
+    $id
+);
+
 $stmtProductos->execute();
 
-$resultadoProductos = $stmtProductos->get_result();
-$datosProductos = $resultadoProductos->fetch_assoc();
+$resultadoProductos =
+    $stmtProductos->get_result();
 
-$cantidadProductos = (int) $datosProductos["cantidad"];
+$datosProductos =
+    $resultadoProductos->fetch_assoc();
+
+$cantidadProductos =
+    (int) $datosProductos["cantidad"];
 
 $stmtProductos->close();
 
@@ -77,7 +130,8 @@ $stmtProductos->close();
 
 if ($cantidadProductos > 0) {
 
-    $mensaje = "No se puede eliminar la categoría \"" .
+    $mensaje =
+        "No se puede eliminar la categoría \"" .
         $categoria["nombre"] .
         "\" porque tiene " .
         $cantidadProductos .
@@ -99,19 +153,16 @@ if ($cantidadProductos > 0) {
 
         <title>No se puede eliminar | Inventario</title>
 
-        <!-- Bootstrap -->
         <link
             href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
             rel="stylesheet"
         >
 
-        <!-- Bootstrap Icons -->
         <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
         >
 
-        <!-- CSS del sistema -->
         <link
             rel="stylesheet"
             href="../../assets/css/estilos.css"
@@ -121,54 +172,7 @@ if ($cantidadProductos > 0) {
 
     <body>
 
-        <!-- NAVBAR -->
-
-        <nav class="navbar navbar-dark">
-
-            <div class="container-fluid px-4">
-
-                <a
-                    href="../../index.php"
-                    class="navbar-brand fw-bold"
-                >
-
-                    <i class="bi bi-box-seam"></i>
-
-                    Sistema de Inventario
-
-                </a>
-
-                <div class="d-flex align-items-center gap-3">
-
-                    <span class="text-white">
-
-                        <i class="bi bi-person-circle"></i>
-
-                        <?php
-                        echo htmlspecialchars($_SESSION["nombre"]);
-                        ?>
-
-                    </span>
-
-                    <a
-                        href="../../logout.php"
-                        class="btn btn-light btn-sm"
-                    >
-
-                        <i class="bi bi-box-arrow-right"></i>
-
-                        Cerrar sesión
-
-                    </a>
-
-                </div>
-
-            </div>
-
-        </nav>
-
-
-        <!-- CONTENIDO -->
+        <?php include "../../includes/navbar.php"; ?>
 
         <div class="container py-5">
 
@@ -190,15 +194,20 @@ if ($cantidadProductos > 0) {
                     <p class="text-muted mt-3">
 
                         <?php
-                        echo htmlspecialchars($mensaje);
+                        echo htmlspecialchars(
+                            $mensaje,
+                            ENT_QUOTES,
+                            "UTF-8"
+                        );
                         ?>
 
                     </p>
 
                     <p class="text-muted">
 
-                        Debes eliminar o cambiar de categoría los productos
-                        asociados antes de poder eliminar esta categoría.
+                        Debes eliminar o cambiar de categoría los
+                        productos asociados antes de poder eliminar
+                        esta categoría.
 
                     </p>
 
@@ -238,17 +247,23 @@ $sqlEliminar = "
     WHERE id = ?
 ";
 
-$stmtEliminar = $conexion->prepare($sqlEliminar);
-$stmtEliminar->bind_param("i", $id);
+$stmtEliminar =
+    $conexion->prepare($sqlEliminar);
+
+if (!$stmtEliminar) {
+    die("Ocurrió un error al preparar la eliminación.");
+}
+
+$stmtEliminar->bind_param(
+    "i",
+    $id
+);
 
 if (!$stmtEliminar->execute()) {
 
     $stmtEliminar->close();
 
-    die(
-        "No se pudo eliminar la categoría: " .
-        htmlspecialchars($conexion->error)
-    );
+    die("No se pudo eliminar la categoría.");
 }
 
 $stmtEliminar->close();
@@ -259,4 +274,5 @@ $stmtEliminar->close();
 // =====================================================
 
 header("Location: listar.php");
+
 exit;

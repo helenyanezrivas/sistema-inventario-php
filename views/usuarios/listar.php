@@ -3,6 +3,7 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // =====================================================
 // VERIFICAR SESIÓN
@@ -130,6 +131,13 @@ document.addEventListener("DOMContentLoaded", function () {
     exit;
 
 }
+
+
+// =====================================================
+// SEGURIDAD CSRF
+// =====================================================
+
+csrf_token();
 
 
 // =====================================================
@@ -901,18 +909,34 @@ $mensajes = [
                                             (int) $_SESSION["usuario_id"]
                                         ): ?>
 
-                                            <a
-                                                href="eliminar.php?id=<?php echo (int) $usuario["id"]; ?>"
-                                                class="btn btn-sm btn-danger"
-                                                title="Desactivar usuario"
-                                                onclick="return confirm('¿Estás segura de desactivar este usuario?');"
+                                            <form
+                                                method="POST"
+                                                action="eliminar.php"
+                                                class="d-inline"
+                                                onsubmit="return confirm('¿Estás segura de desactivar este usuario?');"
                                             >
 
-                                                <i
-                                                    class="bi bi-person-x"
-                                                ></i>
+                                                <input
+                                                    type="hidden"
+                                                    name="id"
+                                                    value="<?php echo (int) $usuario["id"]; ?>"
+                                                >
 
-                                            </a>
+                                                <?php echo csrf_field(); ?>
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-danger"
+                                                    title="Desactivar usuario"
+                                                >
+
+                                                    <i
+                                                        class="bi bi-person-x"
+                                                    ></i>
+
+                                                </button>
+
+                                            </form>
 
                                         <?php else: ?>
 

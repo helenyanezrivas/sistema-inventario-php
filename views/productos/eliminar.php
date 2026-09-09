@@ -3,6 +3,7 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // Verificar sesión
 if (!isset($_SESSION["usuario_id"])) {
@@ -10,17 +11,36 @@ if (!isset($_SESSION["usuario_id"])) {
     exit;
 }
 
+csrf_token();
+
 
 // =====================================================
 // VALIDAR ID
 // =====================================================
 
-if (!isset($_GET["id"]) || !is_numeric($_GET["id"])) {
+$id = 0;
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    verificar_csrf();
+
+    if (
+        !isset($_POST["id"]) ||
+        !is_numeric($_POST["id"])
+    ) {
+        header("Location: listar.php");
+        exit;
+    }
+
+    $id = (int) $_POST["id"];
+
+} else {
+
+    // Si alguien intenta acceder directamente por GET,
+    // no se permite la eliminación.
     header("Location: listar.php");
     exit;
 }
-
-$id = (int) $_GET["id"];
 
 
 // =====================================================
@@ -174,7 +194,9 @@ if ($totalVentas > 0) {
 
                 <?php
                 echo htmlspecialchars(
-                    $_SESSION["nombre"]
+                    $_SESSION["nombre"] ?? "Usuario",
+                    ENT_QUOTES,
+                    "UTF-8"
                 );
                 ?>
 
@@ -242,7 +264,9 @@ if ($totalVentas > 0) {
 
                             <?php
                             echo htmlspecialchars(
-                                $producto["nombre"]
+                                $producto["nombre"],
+                                ENT_QUOTES,
+                                "UTF-8"
                             );
                             ?>
 
@@ -256,7 +280,9 @@ if ($totalVentas > 0) {
 
                             <?php
                             echo htmlspecialchars(
-                                $producto["codigo"]
+                                $producto["codigo"],
+                                ENT_QUOTES,
+                                "UTF-8"
                             );
                             ?>
 
@@ -273,7 +299,7 @@ if ($totalVentas > 0) {
 
                         <strong>
 
-                            <?php echo $totalVentas; ?>
+                            <?php echo (int) $totalVentas; ?>
 
                             <?php
 

@@ -3,6 +3,7 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // =====================================================
 // VERIFICAR SESIÓN
@@ -107,11 +108,25 @@ if (($_SESSION["rol"] ?? "") !== "admin") {
 }
 
 // =====================================================
+// SEGURIDAD CSRF
+// =====================================================
+
+csrf_token();
+
+
+// =====================================================
 // OBTENER ID
 // =====================================================
 
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    header("Location: listar.php");
+    exit;
+}
+
+verificar_csrf();
+
 $id = filter_input(
-    INPUT_GET,
+    INPUT_POST,
     "id",
     FILTER_VALIDATE_INT
 );

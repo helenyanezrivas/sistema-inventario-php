@@ -3,6 +3,7 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // =====================================================
 // VERIFICAR SESIÓN
@@ -12,6 +13,8 @@ if (!isset($_SESSION["usuario_id"])) {
     header("Location: ../../login.php");
     exit;
 }
+
+csrf_token();
 
 // =====================================================
 // FILTROS
@@ -242,7 +245,13 @@ $mensajes = [
 
             <i class="bi bi-check-circle-fill"></i>
 
-            <?php echo htmlspecialchars($mensajes[$mensaje]); ?>
+            <?php
+            echo htmlspecialchars(
+                $mensajes[$mensaje],
+                ENT_QUOTES,
+                "UTF-8"
+            );
+            ?>
 
             <button
                 type="button"
@@ -378,7 +387,7 @@ $mensajes = [
                                 name="busqueda"
                                 class="form-control"
                                 placeholder="Código, producto o categoría..."
-                                value="<?php echo htmlspecialchars($busqueda); ?>"
+                                value="<?php echo htmlspecialchars($busqueda, ENT_QUOTES, "UTF-8"); ?>"
                             >
 
                         </div>
@@ -627,7 +636,7 @@ $mensajes = [
                                         #
 
                                         <?php
-                                        echo $producto["id"];
+                                        echo (int) $producto["id"];
                                         ?>
 
                                     </strong>
@@ -642,7 +651,9 @@ $mensajes = [
 
                                         <?php
                                         echo htmlspecialchars(
-                                            $producto["codigo"]
+                                            $producto["codigo"],
+                                            ENT_QUOTES,
+                                            "UTF-8"
                                         );
                                         ?>
 
@@ -658,7 +669,9 @@ $mensajes = [
 
                                         <?php
                                         echo htmlspecialchars(
-                                            $producto["nombre"]
+                                            $producto["nombre"],
+                                            ENT_QUOTES,
+                                            "UTF-8"
                                         );
                                         ?>
 
@@ -676,7 +689,9 @@ $mensajes = [
 
                                             <?php
                                             echo htmlspecialchars(
-                                                $producto["descripcion"]
+                                                $producto["descripcion"],
+                                                ENT_QUOTES,
+                                                "UTF-8"
                                             );
                                             ?>
 
@@ -692,7 +707,9 @@ $mensajes = [
 
                                     <?php
                                     echo htmlspecialchars(
-                                        $producto["categoria"]
+                                        $producto["categoria"],
+                                        ENT_QUOTES,
+                                        "UTF-8"
                                     );
                                     ?>
 
@@ -763,7 +780,7 @@ $mensajes = [
                                         >
 
                                             <?php
-                                            echo $producto["stock"];
+                                            echo (int) $producto["stock"];
                                             ?>
 
                                             bajo
@@ -777,7 +794,7 @@ $mensajes = [
                                         >
 
                                             <?php
-                                            echo $producto["stock"];
+                                            echo (int) $producto["stock"];
                                             ?>
 
                                             disponibles
@@ -825,7 +842,7 @@ $mensajes = [
                                     <div class="d-flex gap-1">
 
                                         <a
-                                            href="editar.php?id=<?php echo $producto["id"]; ?>"
+                                            href="editar.php?id=<?php echo (int) $producto["id"]; ?>"
                                             class="btn btn-sm btn-warning"
                                             title="Editar producto"
                                         >
@@ -834,16 +851,35 @@ $mensajes = [
 
                                         </a>
 
-                                        <a
-                                            href="eliminar.php?id=<?php echo $producto["id"]; ?>"
-                                            class="btn btn-sm btn-danger"
-                                            title="Eliminar producto"
-                                            onclick="return confirm('¿Estás segura de eliminar este producto?');"
+
+                                        <!-- ELIMINAR -->
+
+                                        <form
+                                            method="POST"
+                                            action="eliminar.php"
+                                            class="d-inline"
+                                            onsubmit="return confirm('¿Estás segura de eliminar este producto?');"
                                         >
 
-                                            <i class="bi bi-trash"></i>
+                                            <?php echo csrf_field(); ?>
 
-                                        </a>
+                                            <input
+                                                type="hidden"
+                                                name="id"
+                                                value="<?php echo (int) $producto["id"]; ?>"
+                                            >
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-danger"
+                                                title="Eliminar producto"
+                                            >
+
+                                                <i class="bi bi-trash"></i>
+
+                                            </button>
+
+                                        </form>
 
                                     </div>
 

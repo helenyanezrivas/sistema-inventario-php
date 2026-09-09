@@ -3,6 +3,7 @@
 session_start();
 
 require_once "config/database.php";
+require_once "includes/security.php";
 
 /*
 |--------------------------------------------------------------------------
@@ -17,7 +18,23 @@ if (isset($_SESSION["usuario_id"])) {
 
 $mensaje = "";
 
+/*
+|--------------------------------------------------------------------------
+| TOKEN CSRF
+|--------------------------------------------------------------------------
+*/
+
+csrf_token();
+
+/*
+|--------------------------------------------------------------------------
+| PROCESAR LOGIN
+|--------------------------------------------------------------------------
+*/
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    verificar_csrf();
 
     $usuario = trim($_POST["usuario"] ?? "");
     $password = $_POST["password"] ?? "";
@@ -47,37 +64,63 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     $usuarioDB = $resultado->fetch_assoc();
 
-                    if (password_verify($password, $usuarioDB["password"])) {
+                    if (
+                        password_verify(
+                            $password,
+                            $usuarioDB["password"]
+                        )
+                    ) {
 
                         /*
-                        | Regenerar el ID de sesión después de autenticar
-                        | correctamente para evitar session fixation.
+                        |--------------------------------------------------------------------------
+                        | Regenerar sesión después de autenticación
+                        |--------------------------------------------------------------------------
                         */
+
                         session_regenerate_id(true);
 
-                        $_SESSION["usuario_id"] = $usuarioDB["id"];
-                        $_SESSION["nombre"] = $usuarioDB["nombre"];
-                        $_SESSION["usuario"] = $usuarioDB["usuario"];
-                        $_SESSION["rol"] = $usuarioDB["rol"];
+                        $_SESSION["usuario_id"] =
+                            $usuarioDB["id"];
+
+                        $_SESSION["nombre"] =
+                            $usuarioDB["nombre"];
+
+                        $_SESSION["usuario"] =
+                            $usuarioDB["usuario"];
+
+                        $_SESSION["rol"] =
+                            $usuarioDB["rol"];
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Regenerar también el token CSRF después del login
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $_SESSION["csrf_token"] =
+                            bin2hex(random_bytes(32));
 
                         header("Location: index.php");
                         exit;
 
                     } else {
 
-                        $mensaje = "Usuario o contraseña incorrectos.";
+                        $mensaje =
+                            "Usuario o contraseña incorrectos.";
 
                     }
 
                 } else {
 
-                    $mensaje = "Usuario o contraseña incorrectos.";
+                    $mensaje =
+                        "Usuario o contraseña incorrectos.";
 
                 }
 
             } else {
 
-                $mensaje = "Ocurrió un error al iniciar sesión.";
+                $mensaje =
+                    "Ocurrió un error al iniciar sesión.";
 
             }
 
@@ -85,7 +128,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         } else {
 
-            $mensaje = "Ocurrió un error al iniciar sesión.";
+            $mensaje =
+                "Ocurrió un error al iniciar sesión.";
 
         }
     }
@@ -100,11 +144,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Iniciar sesión | Inventario</title>
 
     <!-- Bootstrap -->
+
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
         rel="stylesheet"
@@ -182,17 +230,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <?php if (!empty($mensaje)): ?>
 
-                <div class="alert alert-danger" role="alert">
-                    <?php echo htmlspecialchars($mensaje); ?>
+                <div
+                    class="alert alert-danger"
+                    role="alert"
+                >
+                    <?php
+                    echo htmlspecialchars(
+                        $mensaje,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    );
+                    ?>
                 </div>
 
             <?php endif; ?>
 
-            <form method="POST" action="">
+            <form
+                method="POST"
+                action=""
+            >
+
+                <?php echo csrf_field(); ?>
 
                 <div class="mb-3">
 
-                    <label for="usuario" class="form-label">
+                    <label
+                        for="usuario"
+                        class="form-label"
+                    >
                         Usuario
                     </label>
 
@@ -202,6 +267,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         id="usuario"
                         name="usuario"
                         placeholder="Ingresa tu usuario"
+                        maxlength="100"
+                        autocomplete="username"
                         required
                     >
 
@@ -209,7 +276,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 <div class="mb-4">
 
-                    <label for="password" class="form-label">
+                    <label
+                        for="password"
+                        class="form-label"
+                    >
                         Contraseña
                     </label>
 
@@ -219,6 +289,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         id="password"
                         name="password"
                         placeholder="Ingresa tu contraseña"
+                        autocomplete="current-password"
                         required
                     >
 

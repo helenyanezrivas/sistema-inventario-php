@@ -3,12 +3,15 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // Verificar sesión
 if (!isset($_SESSION["usuario_id"])) {
     header("Location: ../../login.php");
     exit;
 }
+
+csrf_token();
 
 $error = "";
 
@@ -38,6 +41,8 @@ if (!$resultado_productos) {
 // =====================================================
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    verificar_csrf();
 
     $productos = isset($_POST["productos"])
         ? $_POST["productos"]
@@ -818,6 +823,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 method="POST"
                 id="formVenta"
             >
+
+                <?php echo csrf_field(); ?>
 
                 <div id="inputsProductos"></div>
 

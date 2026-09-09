@@ -3,42 +3,60 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // =====================================================
 // VERIFICAR SESIÓN
 // =====================================================
 
 if (!isset($_SESSION["usuario_id"])) {
+
     header("Location: ../../login.php");
     exit;
 }
+
+// Generar token CSRF
+csrf_token();
+
 
 // =====================================================
 // OBTENER CATEGORÍAS Y CANTIDAD DE PRODUCTOS
 // =====================================================
 
 $sql = "
+
     SELECT
+
         c.id,
         c.nombre,
         c.estado,
         c.creado_en,
         COUNT(p.id) AS cantidad_productos
+
     FROM categorias c
+
     LEFT JOIN productos p
         ON c.id = p.categoria_id
+
     GROUP BY
+
         c.id,
         c.nombre,
         c.estado,
         c.creado_en
+
     ORDER BY c.id DESC
+
 ";
 
 $resultado = $conexion->query($sql);
 
 if (!$resultado) {
-    die("Error al obtener las categorías: " . $conexion->error);
+
+    die(
+        "Error al obtener las categorías: " .
+        htmlspecialchars($conexion->error)
+    );
 }
 
 ?>
@@ -93,11 +111,13 @@ include "../../includes/navbar.php";
 
 ?>
 
+
 <!-- =====================================================
      CONTENIDO
 ===================================================== -->
 
 <div class="container-fluid px-4 py-4">
+
 
     <!-- TÍTULO Y BOTÓN -->
 
@@ -121,6 +141,7 @@ include "../../includes/navbar.php";
 
         </div>
 
+
         <a
             href="crear.php"
             class="btn btn-primary"
@@ -133,6 +154,7 @@ include "../../includes/navbar.php";
         </a>
 
     </div>
+
 
     <!-- =================================================
          TABLA
@@ -166,23 +188,31 @@ include "../../includes/navbar.php";
 
                     </thead>
 
+
                     <tbody>
+
 
                     <?php if ($resultado->num_rows > 0): ?>
 
+
                         <?php while ($categoria = $resultado->fetch_assoc()): ?>
 
+
                             <tr>
+
 
                                 <!-- ID -->
 
                                 <td>
 
                                     <?php
-                                    echo $categoria["id"];
+
+                                    echo (int) $categoria["id"];
+
                                     ?>
 
                                 </td>
+
 
                                 <!-- NOMBRE -->
 
@@ -191,14 +221,19 @@ include "../../includes/navbar.php";
                                     <strong>
 
                                         <?php
+
                                         echo htmlspecialchars(
-                                            $categoria["nombre"]
+                                            $categoria["nombre"],
+                                            ENT_QUOTES,
+                                            "UTF-8"
                                         );
+
                                         ?>
 
                                     </strong>
 
                                 </td>
+
 
                                 <!-- PRODUCTOS -->
 
@@ -207,12 +242,15 @@ include "../../includes/navbar.php";
                                     <span class="badge text-bg-primary">
 
                                         <?php
-                                        echo $categoria["cantidad_productos"];
+
+                                        echo (int) $categoria["cantidad_productos"];
+
                                         ?>
 
                                     </span>
 
                                 </td>
+
 
                                 <!-- ESTADO -->
 
@@ -238,27 +276,34 @@ include "../../includes/navbar.php";
 
                                 </td>
 
+
                                 <!-- FECHA -->
 
                                 <td>
 
                                     <?php
+
                                     echo date(
                                         "d/m/Y H:i",
                                         strtotime(
                                             $categoria["creado_en"]
                                         )
                                     );
+
                                     ?>
 
                                 </td>
+
 
                                 <!-- ACCIONES -->
 
                                 <td>
 
+
+                                    <!-- EDITAR -->
+
                                     <a
-                                        href="editar.php?id=<?php echo $categoria["id"]; ?>"
+                                        href="editar.php?id=<?php echo (int) $categoria["id"]; ?>"
                                         class="btn btn-sm btn-warning"
                                         title="Editar"
                                     >
@@ -267,24 +312,48 @@ include "../../includes/navbar.php";
 
                                     </a>
 
-                                    <a
-                                        href="eliminar.php?id=<?php echo $categoria["id"]; ?>"
-                                        class="btn btn-sm btn-danger"
-                                        title="Eliminar"
-                                        onclick="return confirm('¿Estás segura de eliminar esta categoría?');"
+
+                                    <!-- ELIMINAR -->
+
+                                    <form
+                                        method="POST"
+                                        action="eliminar.php"
+                                        class="d-inline"
+                                        onsubmit="return confirm('¿Estás segura de eliminar esta categoría?');"
                                     >
 
-                                        <i class="bi bi-trash"></i>
+                                        <?php echo csrf_field(); ?>
 
-                                    </a>
+                                        <input
+                                            type="hidden"
+                                            name="id"
+                                            value="<?php echo (int) $categoria["id"]; ?>"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-danger"
+                                            title="Eliminar"
+                                        >
+
+                                            <i class="bi bi-trash"></i>
+
+                                        </button>
+
+                                    </form>
+
 
                                 </td>
 
+
                             </tr>
+
 
                         <?php endwhile; ?>
 
+
                     <?php else: ?>
+
 
                         <!-- SIN CATEGORÍAS -->
 
@@ -309,7 +378,9 @@ include "../../includes/navbar.php";
 
                         </tr>
 
+
                     <?php endif; ?>
+
 
                     </tbody>
 
@@ -322,6 +393,7 @@ include "../../includes/navbar.php";
     </div>
 
 </div>
+
 
 </body>
 

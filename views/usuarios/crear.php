@@ -3,6 +3,7 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // =====================================================
 // VERIFICAR SESIÓN
@@ -112,6 +113,13 @@ if (($_SESSION["rol"] ?? "") !== "admin") {
 
 
 // =====================================================
+// SEGURIDAD CSRF
+// =====================================================
+
+csrf_token();
+
+
+// =====================================================
 // VARIABLES
 // =====================================================
 
@@ -131,6 +139,8 @@ $errores = [];
 // =====================================================
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    verificar_csrf();
 
     $nombre = trim($_POST["nombre"] ?? "");
 
@@ -522,6 +532,8 @@ include "../../includes/navbar.php";
                 action="crear.php"
                 id="formCrearUsuario"
             >
+
+                <?php echo csrf_field(); ?>
 
                 <div class="row g-4">
 

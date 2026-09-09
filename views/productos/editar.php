@@ -3,12 +3,15 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // Verificar sesión
 if (!isset($_SESSION["usuario_id"])) {
     header("Location: ../../login.php");
     exit;
 }
+
+csrf_token();
 
 
 // =====================================================
@@ -89,6 +92,9 @@ $tipoMensaje = "";
 // =====================================================
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    // Verificar protección CSRF
+    verificar_csrf();
 
     $codigo = trim($_POST["codigo"] ?? "");
     $nombre = trim($_POST["nombre"] ?? "");
@@ -306,7 +312,11 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
                 <i class="bi bi-person-circle"></i>
 
                 <?php
-                echo htmlspecialchars($_SESSION["nombre"]);
+                echo htmlspecialchars(
+                    $_SESSION["nombre"] ?? "Usuario",
+                    ENT_QUOTES,
+                    "UTF-8"
+                );
                 ?>
 
             </span>
@@ -381,12 +391,16 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
             <?php if (!empty($mensaje)): ?>
 
                 <div
-                    class="alert alert-<?php echo $tipoMensaje; ?>"
+                    class="alert alert-<?php echo htmlspecialchars($tipoMensaje, ENT_QUOTES, "UTF-8"); ?>"
                     role="alert"
                 >
 
                     <?php
-                    echo htmlspecialchars($mensaje);
+                    echo htmlspecialchars(
+                        $mensaje,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    );
                     ?>
 
                 </div>
@@ -395,6 +409,8 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
 
 
             <form method="POST" action="">
+
+                <?php echo csrf_field(); ?>
 
 
                 <div class="row g-4">
@@ -421,7 +437,7 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
                             class="form-control"
                             id="codigo"
                             name="codigo"
-                            value="<?php echo htmlspecialchars($codigo); ?>"
+                            value="<?php echo htmlspecialchars($codigo, ENT_QUOTES, "UTF-8"); ?>"
                             maxlength="50"
                             required
                         >
@@ -450,7 +466,7 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
                             class="form-control"
                             id="nombre"
                             name="nombre"
-                            value="<?php echo htmlspecialchars($nombre); ?>"
+                            value="<?php echo htmlspecialchars($nombre, ENT_QUOTES, "UTF-8"); ?>"
                             maxlength="150"
                             required
                         >
@@ -489,7 +505,7 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
                             <?php while ($categoria = $resultadoCategorias->fetch_assoc()): ?>
 
                                 <option
-                                    value="<?php echo $categoria["id"]; ?>"
+                                    value="<?php echo (int) $categoria["id"]; ?>"
                                     <?php
                                     echo (
                                         $categoria_id == $categoria["id"]
@@ -501,7 +517,9 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
 
                                     <?php
                                     echo htmlspecialchars(
-                                        $categoria["nombre"]
+                                        $categoria["nombre"],
+                                        ENT_QUOTES,
+                                        "UTF-8"
                                     );
                                     ?>
 
@@ -534,7 +552,7 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
                             name="descripcion"
                             rows="3"
                             placeholder="Descripción del producto"
-                        ><?php echo htmlspecialchars($descripcion); ?></textarea>
+                        ><?php echo htmlspecialchars($descripcion, ENT_QUOTES, "UTF-8"); ?></textarea>
 
                     </div>
 
@@ -567,7 +585,7 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
                                 name="precio_compra"
                                 min="0"
                                 step="1"
-                                value="<?php echo htmlspecialchars($precio_compra); ?>"
+                                value="<?php echo htmlspecialchars($precio_compra, ENT_QUOTES, "UTF-8"); ?>"
                             >
 
                         </div>
@@ -603,7 +621,7 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
                                 name="precio_venta"
                                 min="0"
                                 step="1"
-                                value="<?php echo htmlspecialchars($precio_venta); ?>"
+                                value="<?php echo htmlspecialchars($precio_venta, ENT_QUOTES, "UTF-8"); ?>"
                             >
 
                         </div>
@@ -632,7 +650,7 @@ $resultadoCategorias = $conexion->query($sqlCategorias);
                             name="stock"
                             min="0"
                             step="1"
-                            value="<?php echo htmlspecialchars($stock); ?>"
+                            value="<?php echo htmlspecialchars($stock, ENT_QUOTES, "UTF-8"); ?>"
                         >
 
                     </div>

@@ -3,12 +3,17 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // Verificar sesión
 if (!isset($_SESSION["usuario_id"])) {
+
     header("Location: ../../login.php");
     exit;
 }
+
+// Generar token CSRF
+csrf_token();
 
 $mensaje = "";
 $tipoMensaje = "";
@@ -32,7 +37,9 @@ function generarCodigoProducto($nombre, $conexion)
 
     // Si por alguna razón queda vacío
     if (empty($nombreLimpio)) {
+
         $prefijo = "PRO";
+
     } else {
 
         // Tomar las primeras 3 letras
@@ -85,6 +92,7 @@ function generarCodigoProducto($nombre, $conexion)
         $stmt = $conexion->prepare($sql);
 
         if (!$stmt) {
+
             die(
                 "Error al preparar la consulta del código: "
                 . $conexion->error
@@ -107,6 +115,7 @@ function generarCodigoProducto($nombre, $conexion)
 
         // Si no existe, encontramos nuestro código
         if (!$existe) {
+
             return $codigo;
         }
 
@@ -123,12 +132,31 @@ function generarCodigoProducto($nombre, $conexion)
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
+    // Verificar protección CSRF
+    verificar_csrf();
+
+
     $nombre = trim($_POST["nombre"] ?? "");
-    $descripcion = trim($_POST["descripcion"] ?? "");
-    $categoria_id = intval($_POST["categoria_id"] ?? 0);
-    $precio_compra = floatval($_POST["precio_compra"] ?? 0);
-    $precio_venta = floatval($_POST["precio_venta"] ?? 0);
-    $stock = intval($_POST["stock"] ?? 0);
+
+    $descripcion = trim(
+        $_POST["descripcion"] ?? ""
+    );
+
+    $categoria_id = intval(
+        $_POST["categoria_id"] ?? 0
+    );
+
+    $precio_compra = floatval(
+        $_POST["precio_compra"] ?? 0
+    );
+
+    $precio_venta = floatval(
+        $_POST["precio_venta"] ?? 0
+    );
+
+    $stock = intval(
+        $_POST["stock"] ?? 0
+    );
 
 
     // =================================================
@@ -140,17 +168,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $categoria_id <= 0
     ) {
 
-        $mensaje = "Completa todos los campos obligatorios.";
+        $mensaje =
+            "Completa todos los campos obligatorios.";
+
         $tipoMensaje = "danger";
 
-    } elseif ($precio_compra < 0 || $precio_venta < 0) {
+    } elseif (
+        $precio_compra < 0 ||
+        $precio_venta < 0
+    ) {
 
-        $mensaje = "Los precios no pueden ser negativos.";
+        $mensaje =
+            "Los precios no pueden ser negativos.";
+
         $tipoMensaje = "danger";
 
     } elseif ($stock < 0) {
 
-        $mensaje = "El stock no puede ser negativo.";
+        $mensaje =
+            "El stock no puede ser negativo.";
+
         $tipoMensaje = "danger";
 
     } else {
@@ -168,9 +205,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             LIMIT 1
         ";
 
-        $stmtCategoria = $conexion->prepare($sqlCategoria);
+        $stmtCategoria =
+            $conexion->prepare($sqlCategoria);
 
         if (!$stmtCategoria) {
+
             die(
                 "Error al preparar la consulta: "
                 . $conexion->error
@@ -190,7 +229,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($resultadoCategoria->num_rows === 0) {
 
-            $mensaje = "La categoría seleccionada no es válida.";
+            $mensaje =
+                "La categoría seleccionada no es válida.";
+
             $tipoMensaje = "danger";
 
         } else {
@@ -231,6 +272,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stmt = $conexion->prepare($sql);
 
             if (!$stmt) {
+
                 die(
                     "Error al preparar la consulta: "
                     . $conexion->error
@@ -288,6 +330,7 @@ $resultadoCategorias =
     $conexion->query($sqlCategorias);
 
 if (!$resultadoCategorias) {
+
     die(
         "Error al obtener categorías: "
         . $conexion->error
@@ -453,7 +496,11 @@ if (!$resultadoCategorias) {
                 >
 
                     <?php
-                    echo htmlspecialchars($mensaje);
+                    echo htmlspecialchars(
+                        $mensaje,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    );
                     ?>
 
                 </div>
@@ -465,6 +512,8 @@ if (!$resultadoCategorias) {
                 method="POST"
                 action=""
             >
+
+                <?php echo csrf_field(); ?>
 
 
                 <div class="row g-4">
@@ -496,7 +545,9 @@ if (!$resultadoCategorias) {
                             placeholder="Ej: Teclado USB"
                             value="<?php
                                 echo htmlspecialchars(
-                                    $_POST["nombre"] ?? ""
+                                    $_POST["nombre"] ?? "",
+                                    ENT_QUOTES,
+                                    "UTF-8"
                                 );
                             ?>"
                             required
@@ -546,7 +597,7 @@ if (!$resultadoCategorias) {
 
                                 <option
                                     value="<?php
-                                        echo $categoria["id"];
+                                        echo (int) $categoria["id"];
                                     ?>"
                                     <?php
                                     echo (
@@ -565,7 +616,9 @@ if (!$resultadoCategorias) {
 
                                     <?php
                                     echo htmlspecialchars(
-                                        $categoria["nombre"]
+                                        $categoria["nombre"],
+                                        ENT_QUOTES,
+                                        "UTF-8"
                                     );
                                     ?>
 
@@ -602,7 +655,9 @@ if (!$resultadoCategorias) {
                             placeholder="Descripción del producto"
                         ><?php
                             echo htmlspecialchars(
-                                $_POST["descripcion"] ?? ""
+                                $_POST["descripcion"] ?? "",
+                                ENT_QUOTES,
+                                "UTF-8"
                             );
                         ?></textarea>
 
@@ -642,7 +697,9 @@ if (!$resultadoCategorias) {
                                 value="<?php
                                     echo htmlspecialchars(
                                         $_POST["precio_compra"]
-                                        ?? "0"
+                                        ?? "0",
+                                        ENT_QUOTES,
+                                        "UTF-8"
                                     );
                                 ?>"
                             >
@@ -685,7 +742,9 @@ if (!$resultadoCategorias) {
                                 value="<?php
                                     echo htmlspecialchars(
                                         $_POST["precio_venta"]
-                                        ?? "0"
+                                        ?? "0",
+                                        ENT_QUOTES,
+                                        "UTF-8"
                                     );
                                 ?>"
                             >
@@ -720,7 +779,9 @@ if (!$resultadoCategorias) {
                             step="1"
                             value="<?php
                                 echo htmlspecialchars(
-                                    $_POST["stock"] ?? "0"
+                                    $_POST["stock"] ?? "0",
+                                    ENT_QUOTES,
+                                    "UTF-8"
                                 );
                             ?>"
                         >

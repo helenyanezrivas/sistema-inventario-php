@@ -3,6 +3,7 @@
 session_start();
 
 require_once "../../config/database.php";
+require_once "../../includes/security.php";
 
 // Verificar sesión
 if (!isset($_SESSION["usuario_id"])) {
@@ -13,11 +14,17 @@ if (!isset($_SESSION["usuario_id"])) {
 $mensaje = "";
 $tipoMensaje = "";
 
+// Generar token CSRF
+csrf_token();
+
 // =====================================================
 // GUARDAR CATEGORÍA
 // =====================================================
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    // Verificar token CSRF
+    verificar_csrf();
 
     $nombre = trim($_POST["nombre"] ?? "");
 
@@ -38,43 +45,65 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         ";
 
         $stmtExiste = $conexion->prepare($sqlExiste);
-        $stmtExiste->bind_param("s", $nombre);
-        $stmtExiste->execute();
 
-        $resultadoExiste = $stmtExiste->get_result();
+        if (!$stmtExiste) {
 
-        if ($resultadoExiste->num_rows > 0) {
-
-            $mensaje = "Ya existe una categoría con ese nombre.";
+            $mensaje = "Ocurrió un error al verificar la categoría.";
             $tipoMensaje = "danger";
 
         } else {
 
-            // Insertar categoría
-            $sql = "
-                INSERT INTO categorias
-                (nombre, estado)
-                VALUES (?, 1)
-            ";
+            $stmtExiste->bind_param("s", $nombre);
+            $stmtExiste->execute();
 
-            $stmt = $conexion->prepare($sql);
-            $stmt->bind_param("s", $nombre);
+            $resultadoExiste = $stmtExiste->get_result();
 
-            if ($stmt->execute()) {
+            if ($resultadoExiste->num_rows > 0) {
 
-                header("Location: listar.php");
-                exit;
+                $mensaje = "Ya existe una categoría con ese nombre.";
+                $tipoMensaje = "danger";
 
             } else {
 
-                $mensaje = "Ocurrió un error al guardar la categoría.";
-                $tipoMensaje = "danger";
+                // Insertar categoría
+                $sql = "
+                    INSERT INTO categorias
+                    (nombre, estado)
+                    VALUES (?, 1)
+                ";
+
+                $stmt = $conexion->prepare($sql);
+
+                if (!$stmt) {
+
+                    $mensaje = "Ocurrió un error al guardar la categoría.";
+                    $tipoMensaje = "danger";
+
+                } else {
+
+                    $stmt->bind_param("s", $nombre);
+
+                    if ($stmt->execute()) {
+
+                        $stmt->close();
+                        $stmtExiste->close();
+
+                        header("Location: listar.php");
+                        exit;
+
+                    } else {
+
+                        $mensaje = "Ocurrió un error al guardar la categoría.";
+                        $tipoMensaje = "danger";
+
+                    }
+
+                    $stmt->close();
+                }
             }
 
-            $stmt->close();
+            $stmtExiste->close();
         }
-
-        $stmtExiste->close();
     }
 }
 
@@ -142,7 +171,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <i class="bi bi-person-circle"></i>
 
                 <?php
-                echo htmlspecialchars($_SESSION["nombre"]);
+                echo htmlspecialchars(
+                    $_SESSION["nombre"] ?? "Usuario",
+                    ENT_QUOTES,
+                    "UTF-8"
+                );
                 ?>
 
             </span>
@@ -214,12 +247,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <?php if (!empty($mensaje)): ?>
 
                 <div
-                    class="alert alert-<?php echo $tipoMensaje; ?>"
+                    class="alert alert-<?php echo htmlspecialchars(
+                        $tipoMensaje,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    ); ?>"
                     role="alert"
                 >
 
                     <?php
-                    echo htmlspecialchars($mensaje);
+                    echo htmlspecialchars(
+                        $mensaje,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    );
                     ?>
 
                 </div>
@@ -227,7 +268,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <?php endif; ?>
 
 
-            <form method="POST" action="">
+            <form
+                method="POST"
+                action=""
+            >
+
+                <?php echo csrf_field(); ?>
 
                 <div class="row">
 
@@ -250,7 +296,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="nombre"
                             name="nombre"
                             placeholder="Ej: Computación"
-                            value="<?php echo htmlspecialchars($_POST["nombre"] ?? ""); ?>"
+                            value="<?php echo htmlspecialchars(
+                                $_POST["nombre"] ?? "",
+                                ENT_QUOTES,
+                                "UTF-8"
+                            ); ?>"
                             maxlength="100"
                             required
                         >
