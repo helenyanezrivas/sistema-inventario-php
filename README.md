@@ -41,7 +41,7 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 ### 🛒 Ventas
 
 - Registro de ventas.
-- Carrito de productos.
+- Selección de productos para registrar una venta.
 - Validación de stock disponible.
 - Descuento automático del stock al registrar una venta.
 - Consulta del detalle de cada venta.
