@@ -233,29 +233,15 @@ composer install
 
 La recuperación de contraseña utiliza PHPMailer mediante SMTP.
 
-Crear localmente:
+Crear localmente el archivo:
 
 ```text
 config/correo.php
 ```
 
-Este archivo **no debe subirse a GitHub**, porque contiene las credenciales SMTP.
+Este archivo contiene la configuración SMTP de la instalación local y está excluido del repositorio mediante `.gitignore`, por lo que cada instalación debe configurarlo con sus propias credenciales.
 
-Ejemplo:
-
-```php
-<?php
-
-$smtpHost = "smtp.gmail.com";
-$smtpPort = 587;
-$smtpUsername = "tu_correo@gmail.com";
-$smtpPassword = "TU_CONTRASENA_DE_APLICACION";
-
-$smtpFromEmail = "tu_correo@gmail.com";
-$smtpFromName = "Sistema de Inventario";
-```
-
-Para Gmail se debe utilizar una contraseña de aplicación y no la contraseña normal de la cuenta.
+Para Gmail, se recomienda utilizar una contraseña de aplicación para el envío mediante SMTP.
 
 ### 8. Configurar el primer administrador
 
