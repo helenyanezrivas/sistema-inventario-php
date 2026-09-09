@@ -4,8 +4,6 @@ Sistema web de gestión de inventario desarrollado en PHP y MySQL, orientado a l
 
 ## Descripción
 
-Aplicación web desarrollada como proyecto de portafolio para gestionar de manera centralizada el inventario de una empresa.
-
 El sistema permite administrar productos y categorías, controlar el stock, registrar ventas y gestionar usuarios según su rol de acceso.
 
 ## Funcionalidades
