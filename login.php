@@ -17,12 +17,30 @@ if (isset($_SESSION["usuario_id"])) {
 }
 
 $mensaje = "";
+$tipoMensaje = "danger";
+
+/*
+|--------------------------------------------------------------------------
+| MENSAJE DE RECUPERACIÓN
+|--------------------------------------------------------------------------
+*/
+
+if (
+    isset($_GET["recuperacion"])
+    && $_GET["recuperacion"] === "ok"
+) {
+
+    $mensaje =
+        "Tu contraseña fue cambiada correctamente. "
+        . "Ya puedes iniciar sesión.";
+
+    $tipoMensaje = "success";
+}
 
 /*
 |--------------------------------------------------------------------------
 | CONTROL DE INTENTOS DE LOGIN
 |--------------------------------------------------------------------------
-| Primera capa de protección contra intentos repetidos:
 | - Máximo 5 intentos fallidos.
 | - Bloqueo temporal de 60 segundos.
 |--------------------------------------------------------------------------
@@ -31,13 +49,22 @@ $mensaje = "";
 $maxIntentosLogin = 5;
 $segundosBloqueoLogin = 60;
 
-$intentosLogin = (int) ($_SESSION["login_intentos"] ?? 0);
-$bloqueadoHasta = (int) ($_SESSION["login_bloqueado_hasta"] ?? 0);
+$intentosLogin =
+    (int) ($_SESSION["login_intentos"] ?? 0);
 
-$loginBloqueado = $bloqueadoHasta > time();
+$bloqueadoHasta =
+    (int) ($_SESSION["login_bloqueado_hasta"] ?? 0);
 
-if (!$loginBloqueado && $bloqueadoHasta > 0) {
+$loginBloqueado =
+    $bloqueadoHasta > time();
+
+if (
+    !$loginBloqueado
+    && $bloqueadoHasta > 0
+) {
+
     unset($_SESSION["login_bloqueado_hasta"]);
+
     $bloqueadoHasta = 0;
 }
 
@@ -81,32 +108,48 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } else {
 
-        $usuario = trim(
-            $_POST["usuario"] ?? ""
-        );
+        $email =
+            trim($_POST["email"] ?? "");
 
         $password =
             $_POST["password"] ?? "";
 
         if (
-            empty($usuario)
+            empty($email)
             || empty($password)
         ) {
 
             $mensaje =
-                "Debes ingresar usuario y contraseña.";
+                "Debes ingresar correo electrónico y contraseña.";
+
+        } elseif (
+            !filter_var(
+                $email,
+                FILTER_VALIDATE_EMAIL
+            )
+        ) {
+
+            $mensaje =
+                "Debes ingresar un correo electrónico válido.";
 
         } else {
+
+            /*
+            |--------------------------------------------------------------------------
+            | BUSCAR USUARIO POR CORREO
+            |--------------------------------------------------------------------------
+            */
 
             $sql = "
                 SELECT
                     id,
                     nombre,
                     usuario,
+                    email,
                     password,
                     rol
                 FROM usuarios
-                WHERE usuario = ?
+                WHERE email = ?
                   AND estado = 1
                 LIMIT 1
             ";
@@ -118,7 +161,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $stmt->bind_param(
                     "s",
-                    $usuario
+                    $email
                 );
 
                 if ($stmt->execute()) {
@@ -132,6 +175,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         $usuarioDB =
                             $resultado->fetch_assoc();
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | VERIFICAR CONTRASEÑA
+                        |--------------------------------------------------------------------------
+                        */
 
                         if (
                             password_verify(
@@ -156,6 +205,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             $_SESSION["usuario"] =
                                 $usuarioDB["usuario"];
+
+                            $_SESSION["email"] =
+                                $usuarioDB["email"];
 
                             $_SESSION["rol"] =
                                 $usuarioDB["rol"];
@@ -218,8 +270,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             } else {
 
                                 $mensaje =
-                                    "Usuario o contraseña incorrectos.";
-
+                                    "Correo o contraseña incorrectos.";
                             }
                         }
 
@@ -253,8 +304,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         } else {
 
                             $mensaje =
-                                "Usuario o contraseña incorrectos.";
-
+                                "Correo o contraseña incorrectos.";
                         }
                     }
 
@@ -262,7 +312,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     $mensaje =
                         "Ocurrió un error al iniciar sesión.";
-
                 }
 
                 $stmt->close();
@@ -271,7 +320,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $mensaje =
                     "Ocurrió un error al iniciar sesión.";
-
             }
         }
     }
@@ -300,55 +348,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         rel="stylesheet"
     >
 
-    <style>
+    <!-- Bootstrap Icons -->
 
-        body {
-            min-height: 100vh;
-            background: #f4f4f8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    >
 
-        .login-container {
-            width: 100%;
-            max-width: 420px;
-        }
+    <!-- Estilos propios -->
 
-        .login-card {
-            background: white;
-            border: none;
-            border-radius: 15px;
-            padding: 35px;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.10);
-        }
-
-        .logo {
-            width: 70px;
-            height: 70px;
-            background: #6f42c1;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 30px;
-            font-weight: bold;
-        }
-
-        .btn-login {
-            background: #6f42c1;
-            border: none;
-            padding: 12px;
-            font-weight: 600;
-        }
-
-        .btn-login:hover {
-            background: #59339d;
-        }
-
-    </style>
+    <link
+        rel="stylesheet"
+        href="assets/css/login.css"
+    >
 
 </head>
 
@@ -373,7 +385,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <?php if (!empty($mensaje)): ?>
 
                 <div
-                    class="alert alert-danger"
+                    class="alert alert-<?php echo htmlspecialchars(
+                        $tipoMensaje,
+                        ENT_QUOTES,
+                        "UTF-8"
+                    ); ?>"
                     role="alert"
                 >
                     <?php
@@ -397,22 +413,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <div class="mb-3">
 
                     <label
-                        for="usuario"
+                        for="email"
                         class="form-label"
                     >
-                        Usuario
+                        Correo electrónico
                     </label>
 
                     <input
-                        type="text"
+                        type="email"
                         class="form-control"
-                        id="usuario"
-                        name="usuario"
-                        placeholder="Ingresa tu usuario"
-                        maxlength="100"
-                        autocomplete="username"
+                        id="email"
+                        name="email"
+                        placeholder="Ingresa tu correo"
+                        maxlength="150"
+                        autocomplete="email"
                         required
-                        <?php echo $loginBloqueado ? "disabled" : ""; ?>
+                        <?php
+                        echo $loginBloqueado
+                            ? "disabled"
+                            : "";
+                        ?>
                     >
 
                 </div>
@@ -434,7 +454,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         placeholder="Ingresa tu contraseña"
                         autocomplete="current-password"
                         required
-                        <?php echo $loginBloqueado ? "disabled" : ""; ?>
+                        <?php
+                        echo $loginBloqueado
+                            ? "disabled"
+                            : "";
+                        ?>
                     >
 
                 </div>
@@ -442,7 +466,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <button
                     type="submit"
                     class="btn btn-primary btn-login w-100"
-                    <?php echo $loginBloqueado ? "disabled" : ""; ?>
+                    <?php
+                    echo $loginBloqueado
+                        ? "disabled"
+                        : "";
+                    ?>
                 >
                     <?php
                     echo $loginBloqueado
@@ -452,6 +480,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </button>
 
             </form>
+
+            <div class="text-center mt-3">
+
+                <a
+                    href="recuperar.php"
+                    class="forgot-password"
+                >
+                    <i class="bi bi-key"></i>
+                    ¿Olvidaste tu contraseña?
+                </a>
+
+            </div>
 
         </div>
 

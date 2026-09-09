@@ -20,9 +20,14 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     usuario VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     rol ENUM('admin', 'vendedor') NOT NULL DEFAULT 'vendedor',
     estado TINYINT(1) NOT NULL DEFAULT 1,
+
+    token_recuperacion CHAR(64) DEFAULT NULL,
+    token_recuperacion_expira DATETIME DEFAULT NULL,
+
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -56,11 +61,13 @@ CREATE TABLE IF NOT EXISTS productos (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
+
     CONSTRAINT fk_productos_categoria
         FOREIGN KEY (categoria_id)
         REFERENCES categorias(id)
         ON UPDATE CASCADE
         ON DELETE RESTRICT
+
 ) ENGINE=InnoDB;
 
 -- ============================================================
@@ -73,11 +80,13 @@ CREATE TABLE IF NOT EXISTS ventas (
     fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     estado ENUM('realizada', 'anulada') NOT NULL DEFAULT 'realizada',
+
     CONSTRAINT fk_ventas_usuario
         FOREIGN KEY (usuario_id)
         REFERENCES usuarios(id)
         ON UPDATE CASCADE
         ON DELETE RESTRICT
+
 ) ENGINE=InnoDB;
 
 -- ============================================================
@@ -91,16 +100,19 @@ CREATE TABLE IF NOT EXISTS detalle_ventas (
     cantidad INT UNSIGNED NOT NULL,
     precio DECIMAL(10,2) NOT NULL,
     subtotal DECIMAL(10,2) NOT NULL,
+
     CONSTRAINT fk_detalle_venta
         FOREIGN KEY (venta_id)
         REFERENCES ventas(id)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
+
     CONSTRAINT fk_detalle_producto
         FOREIGN KEY (producto_id)
         REFERENCES productos(id)
         ON UPDATE CASCADE
         ON DELETE RESTRICT
+
 ) ENGINE=InnoDB;
 
 -- ============================================================

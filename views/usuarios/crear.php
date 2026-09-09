@@ -127,6 +127,8 @@ $nombre = "";
 
 $usuario = "";
 
+$email = "";
+
 $rol = "vendedor";
 
 $estado = 1;
@@ -142,18 +144,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     verificar_csrf();
 
-    $nombre = trim($_POST["nombre"] ?? "");
+    $nombre =
+        trim($_POST["nombre"] ?? "");
 
-    $usuario = trim($_POST["usuario"] ?? "");
+    $usuario =
+        trim($_POST["usuario"] ?? "");
 
-    $password = $_POST["password"] ?? "";
+    $email =
+        trim($_POST["email"] ?? "");
+
+    $password =
+        $_POST["password"] ?? "";
 
     $passwordConfirmacion =
         $_POST["password_confirmacion"] ?? "";
 
-    $rol = $_POST["rol"] ?? "vendedor";
+    $rol =
+        $_POST["rol"] ?? "vendedor";
 
-    $estado = isset($_POST["estado"]) ? 1 : 0;
+    $estado =
+        isset($_POST["estado"]) ? 1 : 0;
 
 
     // =================================================
@@ -211,6 +221,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     // =================================================
+    // VALIDAR CORREO
+    // =================================================
+
+    if ($email === "") {
+
+        $errores[] =
+            "El correo electrónico es obligatorio.";
+
+    } elseif (
+        !filter_var(
+            $email,
+            FILTER_VALIDATE_EMAIL
+        )
+    ) {
+
+        $errores[] =
+            "Debes ingresar un correo electrónico válido.";
+
+    } elseif (mb_strlen($email) > 150) {
+
+        $errores[] =
+            "El correo electrónico no puede superar los 150 caracteres.";
+
+    }
+
+
+    // =================================================
     // VALIDAR CONTRASEÑA
     // =================================================
 
@@ -258,15 +295,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     // =================================================
-    // COMPROBAR USUARIO EXISTENTE
+    // COMPROBAR DATOS EXISTENTES
     // =================================================
 
     if (empty($errores)) {
 
         $sqlExiste = "
-            SELECT id
+            SELECT
+                id,
+                usuario,
+                email
             FROM usuarios
             WHERE LOWER(usuario) = LOWER(?)
+               OR LOWER(email) = LOWER(?)
             LIMIT 1
         ";
 
@@ -277,14 +318,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (!$stmtExiste) {
 
             $errores[] =
-                "Error al comprobar el usuario: "
+                "Error al comprobar los datos: "
                 . $conexion->error;
 
         } else {
 
             $stmtExiste->bind_param(
-                "s",
-                $usuario
+                "ss",
+                $usuario,
+                $email
             );
 
             $stmtExiste->execute();
@@ -295,9 +337,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             if ($resultadoExiste->num_rows > 0) {
 
-                $errores[] =
-                    "El nombre de usuario ya está registrado.";
+                $usuarioExistente = false;
+                $emailExistente = false;
 
+                while (
+                    $filaExistente =
+                    $resultadoExiste->fetch_assoc()
+                ) {
+
+                    if (
+                        strcasecmp(
+                            $filaExistente["usuario"],
+                            $usuario
+                        ) === 0
+                    ) {
+
+                        $usuarioExistente = true;
+                    }
+
+                    if (
+                        strcasecmp(
+                            $filaExistente["email"],
+                            $email
+                        ) === 0
+                    ) {
+
+                        $emailExistente = true;
+                    }
+                }
+
+                if ($usuarioExistente) {
+
+                    $errores[] =
+                        "El nombre de usuario ya está registrado.";
+                }
+
+                if ($emailExistente) {
+
+                    $errores[] =
+                        "El correo electrónico ya está registrado.";
+                }
             }
 
 
@@ -325,11 +404,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             INSERT INTO usuarios (
                 nombre,
                 usuario,
+                email,
                 password,
                 rol,
                 estado
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
         ";
 
 
@@ -346,9 +426,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } else {
 
             $stmtCrear->bind_param(
-                "ssssi",
+                "sssssi",
                 $nombre,
                 $usuario,
+                $email,
                 $passwordHash,
                 $rol,
                 $estado
@@ -500,7 +581,9 @@ include "../../includes/navbar.php";
 
                                 <?php
                                 echo htmlspecialchars(
-                                    $error
+                                    $error,
+                                    ENT_QUOTES,
+                                    "UTF-8"
                                 );
                                 ?>
 
@@ -571,7 +654,11 @@ include "../../includes/navbar.php";
                                 name="nombre"
                                 class="form-control"
                                 maxlength="100"
-                                value="<?php echo htmlspecialchars($nombre); ?>"
+                                value="<?php echo htmlspecialchars(
+                                    $nombre,
+                                    ENT_QUOTES,
+                                    "UTF-8"
+                                ); ?>"
                                 placeholder="Ej: Juan Pérez"
                                 autocomplete="name"
                                 required
@@ -616,7 +703,11 @@ include "../../includes/navbar.php";
                                 name="usuario"
                                 class="form-control"
                                 maxlength="100"
-                                value="<?php echo htmlspecialchars($usuario); ?>"
+                                value="<?php echo htmlspecialchars(
+                                    $usuario,
+                                    ENT_QUOTES,
+                                    "UTF-8"
+                                ); ?>"
                                 placeholder="Ej: juan"
                                 autocomplete="username"
                                 required
@@ -629,6 +720,63 @@ include "../../includes/navbar.php";
 
                             Usa letras, números, punto, guion o
                             guion bajo.
+
+                        </small>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         CORREO ELECTRÓNICO
+                    ================================================== -->
+
+                    <div class="col-md-6">
+
+                        <label
+                            for="email"
+                            class="form-label"
+                        >
+
+                            Correo electrónico
+
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+
+                        <div class="input-group">
+
+                            <span class="input-group-text">
+
+                                <i class="bi bi-envelope"></i>
+
+                            </span>
+
+
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                class="form-control"
+                                maxlength="150"
+                                value="<?php echo htmlspecialchars(
+                                    $email,
+                                    ENT_QUOTES,
+                                    "UTF-8"
+                                ); ?>"
+                                placeholder="Ej: juan@gmail.com"
+                                autocomplete="email"
+                                required
+                            >
+
+                        </div>
+
+
+                        <small class="text-muted">
+
+                            Se utilizará para iniciar sesión y
+                            recuperar la contraseña.
 
                         </small>
 
@@ -1120,6 +1268,34 @@ passwordConfirmacion.addEventListener(
 
 
 // =====================================================
+// VALIDAR CORREO EN EL NAVEGADOR
+// =====================================================
+
+const email =
+    document.getElementById("email");
+
+
+email.addEventListener(
+    "input",
+    function () {
+
+        if (email.validity.valid) {
+
+            email.setCustomValidity("");
+
+        } else {
+
+            email.setCustomValidity(
+                "Ingresa un correo electrónico válido."
+            );
+
+        }
+
+    }
+);
+
+
+// =====================================================
 // VALIDACIÓN ANTES DE ENVIAR
 // =====================================================
 
@@ -1132,6 +1308,21 @@ const formulario =
 formulario.addEventListener(
     "submit",
     function (event) {
+
+        if (!email.checkValidity()) {
+
+            event.preventDefault();
+
+            alert(
+                "Debes ingresar un correo electrónico válido."
+            );
+
+            email.focus();
+
+            return;
+
+        }
+
 
         if (
             password.value.length < 8

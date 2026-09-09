@@ -22,3 +22,9 @@ desktop.ini
 # Archivos de respaldo
 *.bak
 *.backup
+
+# Credenciales y configuración SMTP local
+/config/correo.php
+
+# Configuración de recuperación local antigua
+/config/recuperacion.php

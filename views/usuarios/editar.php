@@ -108,13 +108,6 @@ if (($_SESSION["rol"] ?? "") !== "admin") {
 }
 
 // =====================================================
-// SEGURIDAD CSRF
-// =====================================================
-
-csrf_token();
-
-
-// =====================================================
 // OBTENER ID
 // =====================================================
 
@@ -140,6 +133,7 @@ $sqlUsuario = "
         id,
         nombre,
         usuario,
+        email,
         rol,
         estado
     FROM usuarios
@@ -180,11 +174,18 @@ $usuarioActual = $resultadoUsuario->fetch_assoc();
 $stmtUsuario->close();
 
 // =====================================================
+// SEGURIDAD CSRF
+// =====================================================
+
+csrf_token();
+
+// =====================================================
 // VARIABLES DEL FORMULARIO
 // =====================================================
 
 $nombre = $usuarioActual["nombre"];
 $usuario = $usuarioActual["usuario"];
+$email = $usuarioActual["email"] ?? "";
 $rol = $usuarioActual["rol"];
 $estado = (int) $usuarioActual["estado"];
 
@@ -208,6 +209,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $nombre = trim($_POST["nombre"] ?? "");
     $usuario = trim($_POST["usuario"] ?? "");
+    $email = trim($_POST["email"] ?? "");
     $password = $_POST["password"] ?? "";
     $passwordConfirmacion =
         $_POST["password_confirmacion"] ?? "";
@@ -259,6 +261,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $errores[] =
             "El usuario debe tener al menos 3 caracteres.";
+
+    }
+
+    // =================================================
+    // VALIDAR CORREO ELECTRÓNICO
+    // =================================================
+
+    if ($email === "") {
+
+        $errores[] =
+            "El correo electrónico es obligatorio.";
+
+    } elseif (mb_strlen($email) > 150) {
+
+        $errores[] =
+            "El correo electrónico no puede superar los 150 caracteres.";
+
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+        $errores[] =
+            "Debes ingresar un correo electrónico válido.";
 
     }
 
@@ -437,6 +460,55 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     // =================================================
+    // COMPROBAR CORREO DUPLICADO
+    // =================================================
+
+    if (empty($errores)) {
+
+        $sqlExisteEmail = "
+            SELECT id
+            FROM usuarios
+            WHERE LOWER(email) = LOWER(?)
+              AND id <> ?
+            LIMIT 1
+        ";
+
+        $stmtExisteEmail =
+            $conexion->prepare($sqlExisteEmail);
+
+        if (!$stmtExisteEmail) {
+
+            $errores[] =
+                "Error al comprobar el correo electrónico: "
+                . $conexion->error;
+
+        } else {
+
+            $stmtExisteEmail->bind_param(
+                "si",
+                $email,
+                $id
+            );
+
+            $stmtExisteEmail->execute();
+
+            $resultadoExisteEmail =
+                $stmtExisteEmail->get_result();
+
+            if (
+                $resultadoExisteEmail->num_rows > 0
+            ) {
+
+                $errores[] =
+                    "El correo electrónico ya está registrado.";
+
+            }
+
+            $stmtExisteEmail->close();
+        }
+    }
+
+    // =================================================
     // ACTUALIZAR USUARIO
     // =================================================
 
@@ -459,6 +531,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 SET
                     nombre = ?,
                     usuario = ?,
+                    email = ?,
                     password = ?,
                     rol = ?,
                     estado = ?
@@ -482,6 +555,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     "ssssii",
                     $nombre,
                     $usuario,
+                    $email,
                     $passwordHash,
                     $rolSolicitado,
                     $estadoSolicitado,
@@ -513,6 +587,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 SET
                     nombre = ?,
                     usuario = ?,
+                    email = ?,
                     rol = ?,
                     estado = ?
                 WHERE id = ?
@@ -532,9 +607,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             } else {
 
                 $stmtActualizar->bind_param(
-                    "sssii",
+                    "ssssii",
                     $nombre,
                     $usuario,
+                    $email,
                     $rolSolicitado,
                     $estadoSolicitado,
                     $id
@@ -574,6 +650,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $_SESSION["usuario"] =
                 $usuario;
+
+            $_SESSION["email"] =
+                $email;
 
             $_SESSION["rol"] =
                 $rolSolicitado;
@@ -813,6 +892,51 @@ include "../../includes/navbar.php";
                         <small class="text-muted">
 
                             Usa letras, números, punto, guion o guion bajo.
+
+                        </small>
+
+                    </div>
+
+                    <!-- CORREO ELECTRÓNICO -->
+
+                    <div class="col-md-6">
+
+                        <label
+                            for="email"
+                            class="form-label"
+                        >
+
+                            Correo electrónico
+
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text">
+
+                                <i class="bi bi-envelope"></i>
+
+                            </span>
+
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                class="form-control"
+                                maxlength="150"
+                                value="<?php echo htmlspecialchars($email, ENT_QUOTES, "UTF-8"); ?>"
+                                placeholder="Ej: usuario@correo.com"
+                                autocomplete="email"
+                                required
+                            >
+
+                        </div>
+
+                        <small class="text-muted">
+
+                            Se utilizará para iniciar sesión y recuperar la contraseña.
 
                         </small>
 
