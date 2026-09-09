@@ -35,6 +35,8 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 - Gestión de usuarios.
 - Creación y edición de usuarios.
 - Roles de administrador y vendedor.
+- Correo electrónico asociado a cada usuario.
+- Inicio de sesión mediante correo electrónico.
 - Activación y desactivación de usuarios.
 - Restricción de acceso a la administración de usuarios para administradores.
 - Contraseñas almacenadas mediante hash.
@@ -68,9 +70,9 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 - Gráfico de ventas por categoría del mes actual.
 - Resumen mensual con cantidad de ventas, total vendido y promedio por venta.
 
-### 🔐 Seguridad y control de acceso
+### 🔐 Seguridad y autenticación
 
-- Inicio de sesión mediante usuario y contraseña.
+- Inicio de sesión mediante correo electrónico y contraseña.
 - Verificación de contraseñas mediante `password_verify()`.
 - Contraseñas protegidas mediante hash.
 - Protección de páginas internas mediante sesiones.
@@ -80,6 +82,9 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 - Protección CSRF para formularios y operaciones sensibles.
 - Uso de consultas preparadas para operaciones parametrizadas.
 - Uso de transacciones para el registro y anulación de ventas.
+- Bloqueo temporal después de múltiples intentos fallidos de inicio de sesión.
+- Recuperación de contraseña mediante enlace temporal enviado por correo electrónico.
+- Tokens de recuperación almacenados mediante hash y con expiración.
 
 ## Tecnologías utilizadas
 
@@ -97,6 +102,7 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 
 - **PhpSpreadsheet** — generación de archivos Excel.
 - **Dompdf** — generación de documentos PDF.
+- **PHPMailer** — envío de correos mediante SMTP.
 
 ## Estructura del proyecto
 
@@ -109,7 +115,8 @@ inventario/
 │   └── js/
 │
 ├── config/
-│   └── database.php
+│   ├── database.php
+│   └── correo.php              # Configuración local, ignorada por Git
 │
 ├── includes/
 │   ├── navbar.php
@@ -127,7 +134,9 @@ inventario/
 ├── index.php
 ├── inventario.sql
 ├── login.php
-└── logout.php
+├── logout.php
+├── recuperar.php
+└── restablecer.php
 ```
 
 ## Base de datos
@@ -142,9 +151,9 @@ Principales tablas:
 - `ventas`
 - `detalle_ventas`
 
-Las relaciones entre las tablas permiten mantener la integridad de la información y controlar la asociación entre usuarios, productos, categorías y ventas.
+La tabla `usuarios` utiliza correo electrónico para autenticación y recuperación de contraseña. También contiene los campos temporales utilizados para los tokens de recuperación.
 
-La estructura de la base de datos se encuentra disponible en el archivo:
+La estructura de la base de datos se encuentra disponible en:
 
 ```text
 inventario.sql
@@ -191,21 +200,19 @@ inventario
 En phpMyAdmin:
 
 1. Seleccionar la base de datos `inventario`.
-2. Ir a la pestaña **Importar**.
-3. Seleccionar el archivo `inventario.sql` del proyecto.
+2. Ir a **Importar**.
+3. Seleccionar `inventario.sql`.
 4. Ejecutar la importación.
 
-El archivo `inventario.sql` creará las tablas necesarias para el funcionamiento del sistema.
+El archivo creará las tablas necesarias para el funcionamiento del sistema.
 
-### 5. Configurar la conexión
+### 5. Configurar la conexión a MySQL
 
 Editar:
 
 ```text
 config/database.php
 ```
-
-y configurar los datos correspondientes al servidor MySQL local.
 
 Ejemplo para una instalación local de XAMPP:
 
@@ -218,26 +225,110 @@ $base_datos = "inventario";
 
 ### 6. Instalar dependencias
 
-Desde la carpeta del proyecto ejecutar:
+Desde la carpeta del proyecto:
 
 ```bash
 composer install
 ```
 
-### 7. Iniciar XAMPP
+### 7. Configurar el correo para recuperación de contraseña
+
+La recuperación de contraseña utiliza PHPMailer mediante SMTP.
+
+Crear localmente:
+
+```text
+config/correo.php
+```
+
+Este archivo **no debe subirse a GitHub**, porque contiene las credenciales SMTP.
+
+Ejemplo:
+
+```php
+<?php
+
+$smtpHost = "smtp.gmail.com";
+$smtpPort = 587;
+$smtpUsername = "tu_correo@gmail.com";
+$smtpPassword = "TU_CONTRASENA_DE_APLICACION";
+
+$smtpFromEmail = "tu_correo@gmail.com";
+$smtpFromName = "Sistema de Inventario";
+```
+
+Para Gmail se debe utilizar una contraseña de aplicación y no la contraseña normal de la cuenta.
+
+### 8. Configurar el primer administrador
+
+El proyecto no incluye un usuario administrador con datos reales dentro de `inventario.sql`.
+
+Después de importar la base de datos, se debe crear o configurar el primer administrador en la tabla `usuarios`.
+
+La contraseña debe almacenarse usando un hash generado con PHP y no como texto plano.
+
+Una vez creado el administrador, los demás usuarios pueden registrarse desde:
+
+```text
+Usuarios → Crear usuario
+```
+
+### 9. Iniciar XAMPP
 
 Activar:
 
 - Apache
 - MySQL
 
-### 8. Acceder al sistema
+### 10. Acceder al sistema
 
-Abrir en el navegador:
+Abrir:
 
 ```text
 http://localhost/inventario/
 ```
+
+## Autenticación y recuperación de contraseña
+
+El inicio de sesión utiliza el correo electrónico del usuario:
+
+```text
+Correo electrónico
+Contraseña
+```
+
+La opción:
+
+```text
+¿Olvidaste tu contraseña?
+```
+
+permite solicitar un enlace temporal de recuperación.
+
+Flujo:
+
+```text
+Correo electrónico
+        ↓
+Enlace de recuperación
+        ↓
+Token temporal
+        ↓
+Nueva contraseña
+        ↓
+Token invalidado
+```
+
+El enlace de recuperación tiene una vigencia limitada. Una vez utilizada la recuperación, el token se invalida y no puede reutilizarse.
+
+## Gestión de roles
+
+El sistema contempla dos roles:
+
+| Rol | Acceso |
+|---|---|
+| Administrador | Acceso completo y gestión de usuarios |
+| Vendedor | Operaciones permitidas para ventas e inventario |
 
 ## Flujo de ventas
 
@@ -252,15 +343,6 @@ Al anular una venta:
 3. Se restauran las cantidades de productos al stock.
 4. La venta queda disponible para consulta.
 
-## Gestión de roles
-
-El sistema contempla dos roles:
-
-| Rol | Acceso |
-|---|---|
-| Administrador | Acceso completo y gestión de usuarios |
-| Vendedor | Operaciones permitidas para ventas e inventario |
-
 ## Exportaciones
 
 El sistema permite generar reportes en:
@@ -269,6 +351,24 @@ El sistema permite generar reportes en:
 - PDF
 
 Las exportaciones incluyen información relacionada con productos y ventas según los filtros disponibles en cada módulo.
+
+## Seguridad
+
+Entre las medidas implementadas se incluyen:
+
+- Hash de contraseñas.
+- `password_verify()` para autenticación.
+- Tokens CSRF.
+- Consultas preparadas.
+- Control de sesiones.
+- Control de acceso por rol.
+- Regeneración del ID de sesión.
+- Bloqueo temporal de intentos de login.
+- Tokens de recuperación aleatorios.
+- Hash de tokens de recuperación almacenados en la base de datos.
+- Expiración de enlaces de recuperación.
+- Invalidación de tokens después de utilizarse.
+- Exclusión de credenciales SMTP mediante `.gitignore`.
 
 ## Objetivo del proyecto
 
@@ -283,6 +383,7 @@ Este proyecto fue desarrollado para aplicar conocimientos de:
 - Generación de reportes.
 - Control de roles y permisos.
 - Protección CSRF.
+- Recuperación de contraseña mediante correo electrónico.
 - Integración de librerías mediante Composer.
 
 ## Autor
