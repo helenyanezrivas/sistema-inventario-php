@@ -20,6 +20,29 @@ $mensaje = "";
 
 /*
 |--------------------------------------------------------------------------
+| CONTROL DE INTENTOS DE LOGIN
+|--------------------------------------------------------------------------
+| Primera capa de protección contra intentos repetidos:
+| - Máximo 5 intentos fallidos.
+| - Bloqueo temporal de 60 segundos.
+|--------------------------------------------------------------------------
+*/
+
+$maxIntentosLogin = 5;
+$segundosBloqueoLogin = 60;
+
+$intentosLogin = (int) ($_SESSION["login_intentos"] ?? 0);
+$bloqueadoHasta = (int) ($_SESSION["login_bloqueado_hasta"] ?? 0);
+
+$loginBloqueado = $bloqueadoHasta > time();
+
+if (!$loginBloqueado && $bloqueadoHasta > 0) {
+    unset($_SESSION["login_bloqueado_hasta"]);
+    $bloqueadoHasta = 0;
+}
+
+/*
+|--------------------------------------------------------------------------
 | TOKEN CSRF
 |--------------------------------------------------------------------------
 */
@@ -36,86 +59,213 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     verificar_csrf();
 
-    $usuario = trim($_POST["usuario"] ?? "");
-    $password = $_POST["password"] ?? "";
+    /*
+    |--------------------------------------------------------------------------
+    | COMPROBAR BLOQUEO
+    |--------------------------------------------------------------------------
+    */
 
-    if (empty($usuario) || empty($password)) {
+    if ($loginBloqueado) {
 
-        $mensaje = "Debes ingresar usuario y contraseña.";
+        $segundosRestantes =
+            max(
+                1,
+                $bloqueadoHasta - time()
+            );
+
+        $mensaje =
+            "Demasiados intentos fallidos. "
+            . "Espera "
+            . $segundosRestantes
+            . " segundos e inténtalo nuevamente.";
 
     } else {
 
-        $sql = "SELECT id, nombre, usuario, password, rol
+        $usuario = trim(
+            $_POST["usuario"] ?? ""
+        );
+
+        $password =
+            $_POST["password"] ?? "";
+
+        if (
+            empty($usuario)
+            || empty($password)
+        ) {
+
+            $mensaje =
+                "Debes ingresar usuario y contraseña.";
+
+        } else {
+
+            $sql = "
+                SELECT
+                    id,
+                    nombre,
+                    usuario,
+                    password,
+                    rol
                 FROM usuarios
-                WHERE usuario = ? AND estado = 1
-                LIMIT 1";
+                WHERE usuario = ?
+                  AND estado = 1
+                LIMIT 1
+            ";
 
-        $stmt = $conexion->prepare($sql);
+            $stmt =
+                $conexion->prepare($sql);
 
-        if ($stmt) {
+            if ($stmt) {
 
-            $stmt->bind_param("s", $usuario);
+                $stmt->bind_param(
+                    "s",
+                    $usuario
+                );
 
-            if ($stmt->execute()) {
+                if ($stmt->execute()) {
 
-                $resultado = $stmt->get_result();
-
-                if ($resultado->num_rows === 1) {
-
-                    $usuarioDB = $resultado->fetch_assoc();
+                    $resultado =
+                        $stmt->get_result();
 
                     if (
-                        password_verify(
-                            $password,
-                            $usuarioDB["password"]
-                        )
+                        $resultado->num_rows === 1
                     ) {
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | Regenerar sesión después de autenticación
-                        |--------------------------------------------------------------------------
-                        */
+                        $usuarioDB =
+                            $resultado->fetch_assoc();
 
-                        session_regenerate_id(true);
+                        if (
+                            password_verify(
+                                $password,
+                                $usuarioDB["password"]
+                            )
+                        ) {
 
-                        $_SESSION["usuario_id"] =
-                            $usuarioDB["id"];
+                            /*
+                            |--------------------------------------------------------------------------
+                            | LOGIN CORRECTO
+                            |--------------------------------------------------------------------------
+                            */
 
-                        $_SESSION["nombre"] =
-                            $usuarioDB["nombre"];
+                            session_regenerate_id(true);
 
-                        $_SESSION["usuario"] =
-                            $usuarioDB["usuario"];
+                            $_SESSION["usuario_id"] =
+                                $usuarioDB["id"];
 
-                        $_SESSION["rol"] =
-                            $usuarioDB["rol"];
+                            $_SESSION["nombre"] =
+                                $usuarioDB["nombre"];
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | Regenerar también el token CSRF después del login
-                        |--------------------------------------------------------------------------
-                        */
+                            $_SESSION["usuario"] =
+                                $usuarioDB["usuario"];
 
-                        $_SESSION["csrf_token"] =
-                            bin2hex(random_bytes(32));
+                            $_SESSION["rol"] =
+                                $usuarioDB["rol"];
 
-                        header("Location: index.php");
-                        exit;
+                            /*
+                            |--------------------------------------------------------------------------
+                            | REINICIAR INTENTOS
+                            |--------------------------------------------------------------------------
+                            */
+
+                            unset(
+                                $_SESSION["login_intentos"],
+                                $_SESSION["login_bloqueado_hasta"]
+                            );
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | REGENERAR TOKEN CSRF
+                            |--------------------------------------------------------------------------
+                            */
+
+                            $_SESSION["csrf_token"] =
+                                bin2hex(
+                                    random_bytes(32)
+                                );
+
+                            header(
+                                "Location: index.php"
+                            );
+
+                            exit;
+
+                        } else {
+
+                            $intentosLogin++;
+
+                            $_SESSION["login_intentos"] =
+                                $intentosLogin;
+
+                            if (
+                                $intentosLogin >=
+                                $maxIntentosLogin
+                            ) {
+
+                                $bloqueadoHasta =
+                                    time()
+                                    + $segundosBloqueoLogin;
+
+                                $_SESSION["login_bloqueado_hasta"] =
+                                    $bloqueadoHasta;
+
+                                $loginBloqueado = true;
+
+                                $mensaje =
+                                    "Demasiados intentos fallidos. "
+                                    . "Espera "
+                                    . $segundosBloqueoLogin
+                                    . " segundos e inténtalo nuevamente.";
+
+                            } else {
+
+                                $mensaje =
+                                    "Usuario o contraseña incorrectos.";
+
+                            }
+                        }
 
                     } else {
 
-                        $mensaje =
-                            "Usuario o contraseña incorrectos.";
+                        $intentosLogin++;
 
+                        $_SESSION["login_intentos"] =
+                            $intentosLogin;
+
+                        if (
+                            $intentosLogin >=
+                            $maxIntentosLogin
+                        ) {
+
+                            $bloqueadoHasta =
+                                time()
+                                + $segundosBloqueoLogin;
+
+                            $_SESSION["login_bloqueado_hasta"] =
+                                $bloqueadoHasta;
+
+                            $loginBloqueado = true;
+
+                            $mensaje =
+                                "Demasiados intentos fallidos. "
+                                . "Espera "
+                                . $segundosBloqueoLogin
+                                . " segundos e inténtalo nuevamente.";
+
+                        } else {
+
+                            $mensaje =
+                                "Usuario o contraseña incorrectos.";
+
+                        }
                     }
 
                 } else {
 
                     $mensaje =
-                        "Usuario o contraseña incorrectos.";
+                        "Ocurrió un error al iniciar sesión.";
 
                 }
+
+                $stmt->close();
 
             } else {
 
@@ -123,14 +273,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     "Ocurrió un error al iniciar sesión.";
 
             }
-
-            $stmt->close();
-
-        } else {
-
-            $mensaje =
-                "Ocurrió un error al iniciar sesión.";
-
         }
     }
 }
@@ -270,6 +412,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         maxlength="100"
                         autocomplete="username"
                         required
+                        <?php echo $loginBloqueado ? "disabled" : ""; ?>
                     >
 
                 </div>
@@ -291,6 +434,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         placeholder="Ingresa tu contraseña"
                         autocomplete="current-password"
                         required
+                        <?php echo $loginBloqueado ? "disabled" : ""; ?>
                     >
 
                 </div>
@@ -298,8 +442,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <button
                     type="submit"
                     class="btn btn-primary btn-login w-100"
+                    <?php echo $loginBloqueado ? "disabled" : ""; ?>
                 >
-                    Iniciar sesión
+                    <?php
+                    echo $loginBloqueado
+                        ? "Acceso bloqueado temporalmente"
+                        : "Iniciar sesión";
+                    ?>
                 </button>
 
             </form>
