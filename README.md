@@ -38,6 +38,7 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 - Activación y desactivación de usuarios.
 - Restricción de acceso a la administración de usuarios para administradores.
 - Contraseñas almacenadas mediante hash.
+- Protección de acciones sensibles mediante tokens CSRF.
 
 ### 🛒 Ventas
 
@@ -51,6 +52,7 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 - Anulación de ventas.
 - Restauración automática del stock al anular una venta.
 - Conservación del historial de ventas anuladas.
+- Protección de operaciones sensibles mediante POST y CSRF.
 
 ### 📊 Panel de control
 
@@ -75,7 +77,9 @@ El sistema permite administrar productos y categorías, controlar el stock, regi
 - Control de acceso según rol.
 - Regeneración del ID de sesión después del inicio de sesión.
 - Cierre de sesión y destrucción de la sesión.
+- Protección CSRF para formularios y operaciones sensibles.
 - Uso de consultas preparadas para operaciones parametrizadas.
+- Uso de transacciones para el registro y anulación de ventas.
 
 ## Tecnologías utilizadas
 
@@ -108,7 +112,8 @@ inventario/
 │   └── database.php
 │
 ├── includes/
-│   └── navbar.php
+│   ├── navbar.php
+│   └── security.php
 │
 ├── views/
 │   ├── categorias/
@@ -120,6 +125,7 @@ inventario/
 ├── composer.json
 ├── composer.lock
 ├── index.php
+├── inventario.sql
 ├── login.php
 └── logout.php
 ```
@@ -137,6 +143,14 @@ Principales tablas:
 - `detalle_ventas`
 
 Las relaciones entre las tablas permiten mantener la integridad de la información y controlar la asociación entre usuarios, productos, categorías y ventas.
+
+La estructura de la base de datos se encuentra disponible en el archivo:
+
+```text
+inventario.sql
+```
+
+Este archivo contiene la estructura de las tablas y sus relaciones, pero no incluye los datos actuales del sistema.
 
 ## Instalación
 
@@ -164,15 +178,26 @@ C:\xampp\htdocs\inventario
 
 ### 3. Crear la base de datos
 
-Crear una base de datos MySQL llamada:
+Iniciar **Apache** y **MySQL** desde el panel de XAMPP.
+
+Luego abrir **phpMyAdmin** y crear una base de datos llamada:
 
 ```text
 inventario
 ```
 
-Luego importar la estructura de las tablas correspondientes al proyecto.
+### 4. Importar la estructura de la base de datos
 
-### 4. Configurar la conexión
+En phpMyAdmin:
+
+1. Seleccionar la base de datos `inventario`.
+2. Ir a la pestaña **Importar**.
+3. Seleccionar el archivo `inventario.sql` del proyecto.
+4. Ejecutar la importación.
+
+El archivo `inventario.sql` creará las tablas necesarias para el funcionamiento del sistema.
+
+### 5. Configurar la conexión
 
 Editar:
 
@@ -182,7 +207,16 @@ config/database.php
 
 y configurar los datos correspondientes al servidor MySQL local.
 
-### 5. Instalar dependencias
+Ejemplo para una instalación local de XAMPP:
+
+```php
+$host = "localhost";
+$usuario = "root";
+$password = "";
+$base_datos = "inventario";
+```
+
+### 6. Instalar dependencias
 
 Desde la carpeta del proyecto ejecutar:
 
@@ -190,14 +224,16 @@ Desde la carpeta del proyecto ejecutar:
 composer install
 ```
 
-### 6. Iniciar XAMPP
+### 7. Iniciar XAMPP
 
 Activar:
 
 - Apache
 - MySQL
 
-### 7. Acceder al sistema
+### 8. Acceder al sistema
+
+Abrir en el navegador:
 
 ```text
 http://localhost/inventario/
@@ -246,6 +282,7 @@ Este proyecto fue desarrollado para aplicar conocimientos de:
 - Manejo de transacciones.
 - Generación de reportes.
 - Control de roles y permisos.
+- Protección CSRF.
 - Integración de librerías mediante Composer.
 
 ## Autor
