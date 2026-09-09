@@ -4,9 +4,37 @@
 |--------------------------------------------------------------------------
 | Seguridad del sistema
 |--------------------------------------------------------------------------
-| Funciones relacionadas con protección CSRF.
+| Funciones relacionadas con protección CSRF y cabeceras de seguridad.
 |--------------------------------------------------------------------------
 */
+
+/*
+|--------------------------------------------------------------------------
+| CABECERAS DE SEGURIDAD
+|--------------------------------------------------------------------------
+| Se envían antes de cualquier contenido HTML.
+|--------------------------------------------------------------------------
+*/
+
+if (!headers_sent()) {
+
+    header(
+        "X-Content-Type-Options: nosniff"
+    );
+
+    header(
+        "X-Frame-Options: SAMEORIGIN"
+    );
+
+    header(
+        "Referrer-Policy: strict-origin-when-cross-origin"
+    );
+
+    header(
+        "Permissions-Policy: geolocation=(), camera=(), microphone=()"
+    );
+}
+
 
 /**
  * Generar o recuperar el token CSRF de la sesión.
