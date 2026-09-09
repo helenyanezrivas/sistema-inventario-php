@@ -1,0 +1,346 @@
+/* =====================================================
+   ESTILOS GENERALES
+===================================================== */
+
+body {
+    background-color: #f4f4f8;
+}
+
+.navbar {
+    background-color: #6f42c1 !important;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+
+/* =====================================================
+   TARJETAS GENERALES
+===================================================== */
+
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+}
+
+
+/* =====================================================
+   FORMULARIOS
+===================================================== */
+
+.form-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+.required {
+    color: #dc3545;
+}
+
+
+/* =====================================================
+   TABLAS
+===================================================== */
+
+.table th {
+    white-space: nowrap;
+}
+
+
+/* =====================================================
+   DASHBOARD
+===================================================== */
+
+.dashboard-title {
+    font-weight: 600;
+    color: #212529;
+}
+
+.dashboard-section-title {
+    font-weight: 600;
+    color: #212529;
+}
+
+
+/* =====================================================
+   TARJETAS DE ESTADÍSTICAS
+===================================================== */
+
+.stat-card {
+    border: none;
+    border-radius: 15px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.07);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+
+    user-select: none;
+    cursor: default;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 7px 20px rgba(0, 0, 0, 0.10);
+}
+
+
+/* =====================================================
+   ICONOS DE ESTADÍSTICAS
+===================================================== */
+
+.stat-icon {
+    width: 55px;
+    height: 55px;
+
+    border-radius: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 24px;
+}
+
+.icon-productos {
+    background-color: #e9ddff;
+    color: #6f42c1;
+}
+
+.icon-categorias {
+    background-color: #dff4ff;
+    color: #0d6efd;
+}
+
+.icon-ventas {
+    background-color: #dff7e8;
+    color: #198754;
+}
+
+.icon-stock {
+    background-color: #ffe5e5;
+    color: #dc3545;
+}
+
+
+/* =====================================================
+   NÚMEROS
+===================================================== */
+
+.number {
+    font-size: 30px;
+    font-weight: 700;
+}
+
+
+/* =====================================================
+   INFORMACIÓN DEL DASHBOARD
+===================================================== */
+
+.dashboard-info-card {
+    border: none;
+    border-radius: 15px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.07);
+}
+
+.dashboard-small-icon {
+    width: 45px;
+    height: 45px;
+
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: #e9ddff;
+    color: #6f42c1;
+
+    font-size: 20px;
+}
+
+
+/* =====================================================
+   TABLAS DEL DASHBOARD
+===================================================== */
+
+.dashboard-table-card {
+    border: none;
+    border-radius: 15px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.07);
+}
+
+
+/* =====================================================
+   BIENVENIDA
+===================================================== */
+
+.welcome-card {
+    border: none;
+    border-radius: 15px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.07);
+}
+
+
+/* =====================================================
+   RESUMEN DEL MES
+===================================================== */
+
+.monthly-card {
+    border: none;
+    border-radius: 15px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.07);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.monthly-card:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 7px 20px rgba(0, 0, 0, 0.10);
+}
+
+.monthly-icon {
+    width: 50px;
+    height: 50px;
+
+    border-radius: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 22px;
+}
+
+.monthly-card h3 {
+    font-size: 27px;
+    font-weight: 700;
+}
+
+.monthly-description {
+    margin-top: 18px;
+
+    padding-top: 12px;
+
+    border-top: 1px solid #eeeeee;
+
+    color: #777;
+
+    font-size: 13px;
+}
+
+.icon-mes {
+    background-color: #eee5ff;
+    color: #6f42c1;
+}
+
+.icon-promedio {
+    background-color: #e5f0ff;
+    color: #0d6efd;
+}
+
+
+/* =====================================================
+   ACCIONES RÁPIDAS
+===================================================== */
+
+.quick-action-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.quick-action-card {
+    border: none;
+    border-radius: 15px;
+
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.07);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.quick-action-card:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 7px 20px rgba(0, 0, 0, 0.10);
+}
+
+.quick-action-card .card-body {
+    min-height: 105px;
+
+    display: flex;
+    align-items: center;
+}
+
+.quick-action-icon {
+    width: 45px;
+    height: 45px;
+
+    flex-shrink: 0;
+
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: #e9ddff;
+    color: #6f42c1;
+
+    font-size: 20px;
+}
+
+.quick-action-content {
+    display: flex;
+    flex-direction: column;
+
+    margin-left: 14px;
+}
+
+.quick-action-content strong {
+    color: #212529;
+    font-size: 15px;
+}
+
+.quick-action-content small {
+    color: #777;
+
+    margin-top: 3px;
+
+    font-size: 12px;
+}
+
+.quick-action-arrow {
+    margin-left: auto;
+
+    color: #6f42c1;
+
+    font-size: 17px;
+}

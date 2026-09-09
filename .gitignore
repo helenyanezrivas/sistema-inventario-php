@@ -1,0 +1,24 @@
+# Dependencias de Composer
+/vendor/
+
+# Archivos de entorno
+.env
+.env.*
+!.env.example
+
+# Configuración local de VS Code
+.vscode/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+
+# Archivos de respaldo
+*.bak
+*.backup

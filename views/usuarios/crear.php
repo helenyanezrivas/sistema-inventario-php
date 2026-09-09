@@ -1,0 +1,1164 @@
+<?php
+
+session_start();
+
+require_once "../../config/database.php";
+
+// =====================================================
+// VERIFICAR SESIÓN
+// =====================================================
+
+if (!isset($_SESSION["usuario_id"])) {
+
+    header("Location: ../../login.php");
+    exit;
+
+}
+
+
+// =====================================================
+// VERIFICAR ROL DE ADMINISTRADOR
+// =====================================================
+
+if (($_SESSION["rol"] ?? "") !== "admin") {
+
+    http_response_code(403);
+
+    ?>
+
+    <!DOCTYPE html>
+
+    <html lang="es">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+
+        <title>Acceso denegado | Inventario</title>
+
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        >
+
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+        >
+
+        <link
+            rel="stylesheet"
+            href="../../assets/css/estilos.css"
+        >
+
+    </head>
+
+    <body>
+
+        <?php include "../../includes/navbar.php"; ?>
+
+        <div class="container py-5">
+
+            <div class="card">
+
+                <div class="card-body text-center py-5">
+
+                    <i
+                        class="bi bi-shield-lock fs-1 text-danger"
+                    ></i>
+
+                    <h3 class="mt-3">
+
+                        Acceso denegado
+
+                    </h3>
+
+                    <p class="text-muted">
+
+                        No tienes permisos para crear usuarios.
+
+                    </p>
+
+                    <a
+                        href="../../index.php"
+                        class="btn btn-primary"
+                    >
+
+                        <i class="bi bi-arrow-left"></i>
+
+                        Volver al Dashboard
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </body>
+
+    </html>
+
+    <?php
+
+    exit;
+}
+
+
+// =====================================================
+// VARIABLES
+// =====================================================
+
+$nombre = "";
+
+$usuario = "";
+
+$rol = "vendedor";
+
+$estado = 1;
+
+$errores = [];
+
+
+// =====================================================
+// PROCESAR FORMULARIO
+// =====================================================
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $nombre = trim($_POST["nombre"] ?? "");
+
+    $usuario = trim($_POST["usuario"] ?? "");
+
+    $password = $_POST["password"] ?? "";
+
+    $passwordConfirmacion =
+        $_POST["password_confirmacion"] ?? "";
+
+    $rol = $_POST["rol"] ?? "vendedor";
+
+    $estado = isset($_POST["estado"]) ? 1 : 0;
+
+
+    // =================================================
+    // VALIDAR NOMBRE
+    // =================================================
+
+    if ($nombre === "") {
+
+        $errores[] =
+            "El nombre completo es obligatorio.";
+
+    } elseif (mb_strlen($nombre) < 3) {
+
+        $errores[] =
+            "El nombre debe tener al menos 3 caracteres.";
+
+    } elseif (mb_strlen($nombre) > 100) {
+
+        $errores[] =
+            "El nombre no puede superar los 100 caracteres.";
+
+    }
+
+
+    // =================================================
+    // VALIDAR USUARIO
+    // =================================================
+
+    if ($usuario === "") {
+
+        $errores[] =
+            "El nombre de usuario es obligatorio.";
+
+    } elseif (mb_strlen($usuario) < 3) {
+
+        $errores[] =
+            "El usuario debe tener al menos 3 caracteres.";
+
+    } elseif (mb_strlen($usuario) > 100) {
+
+        $errores[] =
+            "El usuario no puede superar los 100 caracteres.";
+
+    } elseif (
+        !preg_match(
+            '/^[a-zA-Z0-9._-]+$/',
+            $usuario
+        )
+    ) {
+
+        $errores[] =
+            "El usuario solo puede contener letras, números, punto, guion y guion bajo.";
+
+    }
+
+
+    // =================================================
+    // VALIDAR CONTRASEÑA
+    // =================================================
+
+    if ($password === "") {
+
+        $errores[] =
+            "La contraseña es obligatoria.";
+
+    } elseif (strlen($password) < 8) {
+
+        $errores[] =
+            "La contraseña debe tener al menos 8 caracteres.";
+
+    }
+
+
+    // =================================================
+    // CONFIRMAR CONTRASEÑA
+    // =================================================
+
+    if ($password !== $passwordConfirmacion) {
+
+        $errores[] =
+            "Las contraseñas no coinciden.";
+
+    }
+
+
+    // =================================================
+    // VALIDAR ROL
+    // =================================================
+
+    if (
+        !in_array(
+            $rol,
+            ["admin", "vendedor"],
+            true
+        )
+    ) {
+
+        $errores[] =
+            "El rol seleccionado no es válido.";
+
+    }
+
+
+    // =================================================
+    // COMPROBAR USUARIO EXISTENTE
+    // =================================================
+
+    if (empty($errores)) {
+
+        $sqlExiste = "
+            SELECT id
+            FROM usuarios
+            WHERE LOWER(usuario) = LOWER(?)
+            LIMIT 1
+        ";
+
+        $stmtExiste =
+            $conexion->prepare($sqlExiste);
+
+
+        if (!$stmtExiste) {
+
+            $errores[] =
+                "Error al comprobar el usuario: "
+                . $conexion->error;
+
+        } else {
+
+            $stmtExiste->bind_param(
+                "s",
+                $usuario
+            );
+
+            $stmtExiste->execute();
+
+            $resultadoExiste =
+                $stmtExiste->get_result();
+
+
+            if ($resultadoExiste->num_rows > 0) {
+
+                $errores[] =
+                    "El nombre de usuario ya está registrado.";
+
+            }
+
+
+            $stmtExiste->close();
+
+        }
+
+    }
+
+
+    // =================================================
+    // CREAR USUARIO
+    // =================================================
+
+    if (empty($errores)) {
+
+        $passwordHash =
+            password_hash(
+                $password,
+                PASSWORD_DEFAULT
+            );
+
+
+        $sqlCrear = "
+            INSERT INTO usuarios (
+                nombre,
+                usuario,
+                password,
+                rol,
+                estado
+            )
+            VALUES (?, ?, ?, ?, ?)
+        ";
+
+
+        $stmtCrear =
+            $conexion->prepare($sqlCrear);
+
+
+        if (!$stmtCrear) {
+
+            $errores[] =
+                "Error al preparar la creación del usuario: "
+                . $conexion->error;
+
+        } else {
+
+            $stmtCrear->bind_param(
+                "ssssi",
+                $nombre,
+                $usuario,
+                $passwordHash,
+                $rol,
+                $estado
+            );
+
+
+            if ($stmtCrear->execute()) {
+
+                $stmtCrear->close();
+
+                header(
+                    "Location: listar.php?mensaje=usuario_creado"
+                );
+
+                exit;
+
+            } else {
+
+                $errores[] =
+                    "Error al crear el usuario: "
+                    . $stmtCrear->error;
+
+                $stmtCrear->close();
+
+            }
+
+        }
+
+    }
+
+}
+
+?>
+
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Nuevo usuario | Inventario</title>
+
+
+    <!-- Bootstrap -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- Bootstrap Icons -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    >
+
+
+    <!-- CSS DEL SISTEMA -->
+
+    <link
+        rel="stylesheet"
+        href="../../assets/css/estilos.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<?php
+
+// =====================================================
+// NAVBAR COMPARTIDA
+// =====================================================
+
+include "../../includes/navbar.php";
+
+?>
+
+
+<div class="container-fluid px-4 py-4">
+
+
+    <!-- =================================================
+         ENCABEZADO
+    ================================================== -->
+
+    <div class="mb-4">
+
+        <h2 class="mb-1">
+
+            <i class="bi bi-person-plus"></i>
+
+            Nuevo usuario
+
+        </h2>
+
+        <p class="text-muted mb-0">
+
+            Registra un nuevo usuario para acceder al sistema.
+
+        </p>
+
+    </div>
+
+
+    <!-- =================================================
+         ERRORES
+    ================================================== -->
+
+    <?php if (!empty($errores)): ?>
+
+        <div class="alert alert-danger">
+
+            <div class="d-flex">
+
+                <div class="me-2">
+
+                    <i
+                        class="bi bi-exclamation-triangle-fill"
+                    ></i>
+
+                </div>
+
+                <div>
+
+                    <strong>
+
+                        No se pudo crear el usuario.
+
+                    </strong>
+
+
+                    <ul class="mb-0 mt-2">
+
+                        <?php foreach ($errores as $error): ?>
+
+                            <li>
+
+                                <?php
+                                echo htmlspecialchars(
+                                    $error
+                                );
+                                ?>
+
+                            </li>
+
+                        <?php endforeach; ?>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    <?php endif; ?>
+
+
+    <!-- =================================================
+         FORMULARIO
+    ================================================== -->
+
+    <div class="card">
+
+        <div class="card-body">
+
+            <form
+                method="POST"
+                action="crear.php"
+                id="formCrearUsuario"
+            >
+
+                <div class="row g-4">
+
+
+                    <!-- =================================================
+                         NOMBRE
+                    ================================================== -->
+
+                    <div class="col-md-6">
+
+                        <label
+                            for="nombre"
+                            class="form-label"
+                        >
+
+                            Nombre completo
+
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+
+                        <div class="input-group">
+
+                            <span class="input-group-text">
+
+                                <i class="bi bi-person"></i>
+
+                            </span>
+
+
+                            <input
+                                type="text"
+                                id="nombre"
+                                name="nombre"
+                                class="form-control"
+                                maxlength="100"
+                                value="<?php echo htmlspecialchars($nombre); ?>"
+                                placeholder="Ej: Juan Pérez"
+                                autocomplete="name"
+                                required
+                            >
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         USUARIO
+                    ================================================== -->
+
+                    <div class="col-md-6">
+
+                        <label
+                            for="usuario"
+                            class="form-label"
+                        >
+
+                            Nombre de usuario
+
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+
+                        <div class="input-group">
+
+                            <span class="input-group-text">
+
+                                <i class="bi bi-person-badge"></i>
+
+                            </span>
+
+
+                            <input
+                                type="text"
+                                id="usuario"
+                                name="usuario"
+                                class="form-control"
+                                maxlength="100"
+                                value="<?php echo htmlspecialchars($usuario); ?>"
+                                placeholder="Ej: juan"
+                                autocomplete="username"
+                                required
+                            >
+
+                        </div>
+
+
+                        <small class="text-muted">
+
+                            Usa letras, números, punto, guion o
+                            guion bajo.
+
+                        </small>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         CONTRASEÑA
+                    ================================================== -->
+
+                    <div class="col-md-6">
+
+                        <label
+                            for="password"
+                            class="form-label"
+                        >
+
+                            Contraseña
+
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+
+                        <div class="input-group">
+
+                            <span class="input-group-text">
+
+                                <i class="bi bi-lock"></i>
+
+                            </span>
+
+
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                class="form-control"
+                                minlength="8"
+                                autocomplete="new-password"
+                                required
+                            >
+
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                id="mostrarPassword"
+                                title="Mostrar contraseña"
+                            >
+
+                                <i
+                                    class="bi bi-eye"
+                                    id="iconoPassword"
+                                ></i>
+
+                            </button>
+
+                        </div>
+
+
+                        <small
+                            class="text-muted"
+                            id="ayudaPassword"
+                        >
+
+                            Mínimo 8 caracteres.
+
+                        </small>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         CONFIRMAR CONTRASEÑA
+                    ================================================== -->
+
+                    <div class="col-md-6">
+
+                        <label
+                            for="password_confirmacion"
+                            class="form-label"
+                        >
+
+                            Confirmar contraseña
+
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+
+                        <div class="input-group">
+
+                            <span class="input-group-text">
+
+                                <i class="bi bi-lock-fill"></i>
+
+                            </span>
+
+
+                            <input
+                                type="password"
+                                id="password_confirmacion"
+                                name="password_confirmacion"
+                                class="form-control"
+                                minlength="8"
+                                autocomplete="new-password"
+                                required
+                            >
+
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                id="mostrarPasswordConfirmacion"
+                                title="Mostrar contraseña"
+                            >
+
+                                <i
+                                    class="bi bi-eye"
+                                    id="iconoPasswordConfirmacion"
+                                ></i>
+
+                            </button>
+
+                        </div>
+
+
+                        <small
+                            class="text-muted"
+                            id="ayudaConfirmacion"
+                        >
+
+                            Debe coincidir con la contraseña.
+
+                        </small>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         ROL
+                    ================================================== -->
+
+                    <div class="col-md-6">
+
+                        <label
+                            for="rol"
+                            class="form-label"
+                        >
+
+                            Rol
+
+                            <span class="text-danger">*</span>
+
+                        </label>
+
+
+                        <select
+                            id="rol"
+                            name="rol"
+                            class="form-select"
+                            required
+                        >
+
+                            <option
+                                value="admin"
+                                <?php
+                                echo $rol === "admin"
+                                    ? "selected"
+                                    : "";
+                                ?>
+                            >
+
+                                Administrador
+
+                            </option>
+
+
+                            <option
+                                value="vendedor"
+                                <?php
+                                echo $rol === "vendedor"
+                                    ? "selected"
+                                    : "";
+                                ?>
+                            >
+
+                                Vendedor
+
+                            </option>
+
+                        </select>
+
+
+                        <small class="text-muted">
+
+                            El administrador puede gestionar usuarios.
+                            El vendedor no.
+
+                        </small>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         ESTADO
+                    ================================================== -->
+
+                    <div class="col-md-6">
+
+                        <label class="form-label">
+
+                            Estado
+
+                        </label>
+
+
+                        <div class="form-check form-switch mt-2">
+
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id="estado"
+                                name="estado"
+                                <?php
+                                echo $estado === 1
+                                    ? "checked"
+                                    : "";
+                                ?>
+                            >
+
+
+                            <label
+                                class="form-check-label"
+                                for="estado"
+                            >
+
+                                Usuario activo
+
+                            </label>
+
+                        </div>
+
+
+                        <small class="text-muted">
+
+                            Los usuarios inactivos no pueden
+                            iniciar sesión.
+
+                        </small>
+
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- =================================================
+                     BOTONES
+                ================================================== -->
+
+                <hr class="my-4">
+
+
+                <div
+                    class="d-flex justify-content-end gap-2"
+                >
+
+                    <a
+                        href="listar.php"
+                        class="btn btn-outline-secondary"
+                    >
+
+                        <i class="bi bi-arrow-left"></i>
+
+                        Cancelar
+
+                    </a>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+
+                        <i class="bi bi-person-plus"></i>
+
+                        Crear usuario
+
+                    </button>
+
+                </div>
+
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     JAVASCRIPT
+     SOLO FUNCIONALIDAD, NO ESTILOS
+====================================================== -->
+
+<script>
+
+// =====================================================
+// MOSTRAR / OCULTAR CONTRASEÑA
+// =====================================================
+
+const password =
+    document.getElementById("password");
+
+const botonPassword =
+    document.getElementById("mostrarPassword");
+
+const iconoPassword =
+    document.getElementById("iconoPassword");
+
+
+botonPassword.addEventListener(
+    "click",
+    function () {
+
+        if (password.type === "password") {
+
+            password.type = "text";
+
+            iconoPassword.classList.remove(
+                "bi-eye"
+            );
+
+            iconoPassword.classList.add(
+                "bi-eye-slash"
+            );
+
+            botonPassword.title =
+                "Ocultar contraseña";
+
+        } else {
+
+            password.type = "password";
+
+            iconoPassword.classList.remove(
+                "bi-eye-slash"
+            );
+
+            iconoPassword.classList.add(
+                "bi-eye"
+            );
+
+            botonPassword.title =
+                "Mostrar contraseña";
+
+        }
+
+    }
+);
+
+
+// =====================================================
+// MOSTRAR / OCULTAR CONFIRMACIÓN
+// =====================================================
+
+const passwordConfirmacion =
+    document.getElementById(
+        "password_confirmacion"
+    );
+
+const botonPasswordConfirmacion =
+    document.getElementById(
+        "mostrarPasswordConfirmacion"
+    );
+
+const iconoPasswordConfirmacion =
+    document.getElementById(
+        "iconoPasswordConfirmacion"
+    );
+
+
+botonPasswordConfirmacion.addEventListener(
+    "click",
+    function () {
+
+        if (
+            passwordConfirmacion.type ===
+            "password"
+        ) {
+
+            passwordConfirmacion.type =
+                "text";
+
+            iconoPasswordConfirmacion.classList.remove(
+                "bi-eye"
+            );
+
+            iconoPasswordConfirmacion.classList.add(
+                "bi-eye-slash"
+            );
+
+            botonPasswordConfirmacion.title =
+                "Ocultar contraseña";
+
+        } else {
+
+            passwordConfirmacion.type =
+                "password";
+
+            iconoPasswordConfirmacion.classList.remove(
+                "bi-eye-slash"
+            );
+
+            iconoPasswordConfirmacion.classList.add(
+                "bi-eye"
+            );
+
+            botonPasswordConfirmacion.title =
+                "Mostrar contraseña";
+
+        }
+
+    }
+);
+
+
+// =====================================================
+// COMPROBAR COINCIDENCIA DE CONTRASEÑAS
+// =====================================================
+
+const ayudaConfirmacion =
+    document.getElementById(
+        "ayudaConfirmacion"
+    );
+
+
+function comprobarPassword() {
+
+    if (
+        passwordConfirmacion.value === ""
+    ) {
+
+        ayudaConfirmacion.textContent =
+            "Debe coincidir con la contraseña.";
+
+        return;
+
+    }
+
+
+    if (
+        password.value ===
+        passwordConfirmacion.value
+    ) {
+
+        ayudaConfirmacion.textContent =
+            "Las contraseñas coinciden.";
+
+    } else {
+
+        ayudaConfirmacion.textContent =
+            "Las contraseñas no coinciden.";
+
+    }
+
+}
+
+
+password.addEventListener(
+    "input",
+    comprobarPassword
+);
+
+passwordConfirmacion.addEventListener(
+    "input",
+    comprobarPassword
+);
+
+
+// =====================================================
+// VALIDACIÓN ANTES DE ENVIAR
+// =====================================================
+
+const formulario =
+    document.getElementById(
+        "formCrearUsuario"
+    );
+
+
+formulario.addEventListener(
+    "submit",
+    function (event) {
+
+        if (
+            password.value.length < 8
+        ) {
+
+            event.preventDefault();
+
+            alert(
+                "La contraseña debe tener al menos 8 caracteres."
+            );
+
+            password.focus();
+
+            return;
+
+        }
+
+
+        if (
+            password.value !==
+            passwordConfirmacion.value
+        ) {
+
+            event.preventDefault();
+
+            alert(
+                "Las contraseñas no coinciden."
+            );
+
+            passwordConfirmacion.focus();
+
+        }
+
+    }
+);
+
+</script>
+
+
+</body>
+
+</html>
